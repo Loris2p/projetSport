@@ -133,121 +133,186 @@ class ActiveSessionScreen extends StatelessWidget {
     Exercise exercise,
     WorkoutProvider provider,
   ) {
+    final hasGroup = perfEx.groupId != null && perfEx.groupId!.isNotEmpty;
+    final groupColor = hasGroup ? _getGroupColor(perfEx.groupId!) : null;
+
     return Card(
       key: ValueKey(perfEx.exerciseId),
       margin: const EdgeInsets.only(bottom: 16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Exercise Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        exercise.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        exercise.category,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.grey),
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      provider.removeExerciseFromActiveSession(perfEx.exerciseId);
-                    } else if (value == 'notes') {
-                      _showNotesDialog(context, perfEx, provider);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'notes',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_note, size: 20),
-                          SizedBox(width: 8),
-                          Text("Notes d'exercice"),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                          SizedBox(width: 8),
-                          Text("Supprimer", style: TextStyle(color: Colors.redAccent)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (perfEx.notes != null && perfEx.notes!.isNotEmpty) ...[
-              const SizedBox(height: 6),
+            if (hasGroup)
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                width: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  perfEx.notes!,
-                  style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                  color: groupColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
+                  ),
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
-
-            // Sets Header
-            const Row(
-              children: [
-                SizedBox(width: 45, child: Text("SÉRIE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
-                Expanded(flex: 3, child: Center(child: Text("POIDS (KG)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                Expanded(flex: 3, child: Center(child: Text("RÉPETS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                SizedBox(width: 45, child: Center(child: Text("OK", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-              ],
-            ),
-            const Divider(),
-
-            // Sets List
-            ...perfEx.sets.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final set = entry.value;
-              return _buildSetRow(context, perfEx, set, idx, provider);
-            }),
-
-            const SizedBox(height: 8),
-            // Add Set Button
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xff2d2d34)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (hasGroup) ...[
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: groupColor!.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: groupColor, width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.group_work, size: 10, color: groupColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  perfEx.groupId!,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: groupColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    // Exercise Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                exercise.name,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                exercise.category,
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert, color: Colors.grey),
+                          onSelected: (value) {
+                            if (value == 'delete') {
+                              provider.removeExerciseFromActiveSession(perfEx.exerciseId);
+                            } else if (value == 'notes') {
+                              _showNotesDialog(context, perfEx, provider);
+                            } else if (value == 'group') {
+                              _showGroupDialog(context, perfEx, provider);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'notes',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_note, size: 20),
+                                  SizedBox(width: 8),
+                                  Text("Notes d'exercice"),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'group',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.group_work, size: 20),
+                                  SizedBox(width: 8),
+                                  Text("Associer à un groupe"),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                                  SizedBox(width: 8),
+                                  Text("Supprimer", style: TextStyle(color: Colors.redAccent)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text("Ajouter une série", style: TextStyle(fontSize: 12)),
-                    onPressed: () {
-                      provider.addSetToPerformedExercise(perfEx);
-                    },
-                  ),
+                    if (perfEx.notes != null && perfEx.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          perfEx.notes!,
+                          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+
+                    // Sets Header
+                    const Row(
+                      children: [
+                        SizedBox(width: 45, child: Text("SÉRIE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
+                        Expanded(flex: 3, child: Center(child: Text("POIDS (KG)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        Expanded(flex: 3, child: Center(child: Text("RÉPETS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        SizedBox(width: 45, child: Center(child: Text("OK", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                      ],
+                    ),
+                    const Divider(),
+
+                    // Sets List
+                    ...perfEx.sets.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final set = entry.value;
+                      return _buildSetRow(context, perfEx, set, idx, provider);
+                    }),
+
+                    const SizedBox(height: 8),
+                    // Add Set Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xff2d2d34)),
+                            ),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text("Ajouter une série", style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              provider.addSetToPerformedExercise(perfEx);
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
                 ),
-              ],
-            )
+              ),
+            ),
           ],
         ),
       ),
@@ -760,6 +825,103 @@ class ActiveSessionScreen extends StatelessWidget {
         content: Text("Félicitations ! Séance enregistrée avec succès."),
         backgroundColor: Colors.green,
       ),
+    );
+  }
+
+  Color _getGroupColor(String groupId) {
+    final colors = [
+      const Color(0xff2563eb), // Blue
+      const Color(0xff10b981), // Green
+      const Color(0xff8b5cf6), // Purple
+      const Color(0xfff59e0b), // Amber/Orange
+      const Color(0xffec4899), // Pink
+      const Color(0xff06b6d4), // Cyan
+    ];
+    final hash = groupId.hashCode.abs();
+    return colors[hash % colors.length];
+  }
+
+  void _showGroupDialog(BuildContext context, PerformedExercise perfEx, WorkoutProvider provider) {
+    final session = provider.activeSession;
+    if (session == null) return;
+
+    final existingGroups = session.exercises
+        .map((e) => e.groupId)
+        .where((g) => g != null && g.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        String? newGroupName;
+        return AlertDialog(
+          title: const Text("Associer à un groupe"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (existingGroups.isNotEmpty) ...[
+                  const Text("Groupes existants :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  ...existingGroups.map((group) {
+                    final isCurrent = perfEx.groupId == group;
+                    return ListTile(
+                      title: Text(group),
+                      leading: Icon(Icons.group_work, color: _getGroupColor(group)),
+                      trailing: isCurrent ? const Icon(Icons.check, color: Color(0xff2563eb)) : null,
+                      onTap: () {
+                        provider.setExerciseGroup(perfEx, group);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                  const Divider(),
+                ],
+                const Text("Nouveau groupe :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Nom du groupe (ex: Superset A)",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onChanged: (val) {
+                    newGroupName = val.trim();
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (perfEx.groupId != null && perfEx.groupId!.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          provider.setExerciseGroup(perfEx, null);
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Retirer du groupe", style: TextStyle(color: Colors.redAccent)),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (newGroupName != null && newGroupName!.isNotEmpty) {
+                          provider.setExerciseGroup(perfEx, newGroupName);
+                        }
+                        Navigator.pop(context);
+                      },
+                      child: const Text("Créer"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

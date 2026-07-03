@@ -94,6 +94,15 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateExercise(Exercise exercise) async {
+    await repository.saveExercise(exercise);
+    _exercises = repository.getExercises();
+    _sessionExercisesSummaryCache.clear();
+    _sessionPRsCache.clear();
+    _updateWeeklyStatsAndFlatHistory();
+    notifyListeners();
+  }
+
   Future<void> deleteExercise(String id) async {
     await repository.deleteExercise(id);
     _exercises = repository.getExercises();
@@ -104,12 +113,13 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Programs ---
-  Future<void> createProgram(String name, String description, List<Exercise> exercises) async {
+  Future<void> createProgram(String name, String description, List<Exercise> exercises, [Map<String, String>? exerciseGroups]) async {
     final newProgram = WorkoutProgram(
       id: 'program_${_uuid.v4()}',
       name: name,
       description: description,
       exercises: exercises,
+      exerciseGroups: exerciseGroups,
     );
     await repository.saveProgram(newProgram);
     _programs = repository.getPrograms();
@@ -147,9 +157,11 @@ class WorkoutProvider with ChangeNotifier {
 
     if (program != null) {
       for (var exercise in program.exercises) {
+        final String? exerciseGroupId = program.exerciseGroups?[exercise.id];
         exercises.add(
           PerformedExercise(
             exerciseId: exercise.id,
+            groupId: exerciseGroupId,
             sets: [
               ExerciseSet(id: _uuid.v4(), type: SetType.normal),
               ExerciseSet(id: _uuid.v4(), type: SetType.normal),
@@ -212,6 +224,17 @@ class WorkoutProvider with ChangeNotifier {
     final item = _activeSession!.exercises.removeAt(oldIndex);
     _activeSession!.exercises.insert(newIndex, item);
     notifyListeners();
+  }
+
+  void setExerciseGroup(PerformedExercise perfEx, String? groupId) {
+    if (_activeSession == null) return;
+    final index = _activeSession!.exercises.indexOf(perfEx);
+    if (index >= 0) {
+      _activeSession!.exercises[index].groupId = groupId;
+      _sessionExercisesSummaryCache.clear();
+      _sessionPRsCache.clear();
+      notifyListeners();
+    }
   }
 
   void addSetToPerformedExercise(PerformedExercise perfEx) {

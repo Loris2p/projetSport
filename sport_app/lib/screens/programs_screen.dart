@@ -214,6 +214,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
   late String _name;
   late String _description;
   List<Exercise> _selectedExercises = [];
+  final Map<String, String> _exerciseGroups = {};
   String _searchQuery = '';
   String _selectedCategory = 'Tous';
 
@@ -224,6 +225,9 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
       _name = widget.program!.name;
       _description = widget.program!.description;
       _selectedExercises = List.from(widget.program!.exercises);
+      if (widget.program!.exerciseGroups != null) {
+        _exerciseGroups.addAll(widget.program!.exerciseGroups!);
+      }
     } else {
       _name = '';
       _description = '';
@@ -327,21 +331,101 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                             children: _selectedExercises.asMap().entries.map((entry) {
                               final idx = entry.key;
                               final ex = entry.value;
+                              final hasGroup = _exerciseGroups.containsKey(ex.id) && _exerciseGroups[ex.id]!.isNotEmpty;
+                              final groupColor = hasGroup ? _getGroupColor(_exerciseGroups[ex.id]!) : null;
+
                               return Card(
                                 key: ValueKey(ex.id),
                                 margin: const EdgeInsets.symmetric(vertical: 4.0),
                                 color: const Color(0xff1e1e24),
-                                child: ListTile(
-                                  leading: const Icon(Icons.drag_handle, color: Colors.grey),
-                                  title: Text(ex.name),
-                                  subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedExercises.removeAt(idx);
-                                      });
-                                    },
+                                child: IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (hasGroup)
+                                        Container(
+                                          width: 5,
+                                          decoration: BoxDecoration(
+                                            color: groupColor,
+                                            borderRadius: const BorderRadius.only(
+                                              topLeft: Radius.circular(12),
+                                              bottomLeft: Radius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      Expanded(
+                                        child: ListTile(
+                                          leading: const Icon(Icons.drag_handle, color: Colors.grey),
+                                          title: Row(
+                                            children: [
+                                              Expanded(child: Text(ex.name)),
+                                              if (hasGroup) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: groupColor!.withValues(alpha: 0.15),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: groupColor, width: 0.8),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.group_work, size: 8, color: groupColor),
+                                                      const SizedBox(width: 2),
+                                                      Text(
+                                                        _exerciseGroups[ex.id]!,
+                                                        style: TextStyle(
+                                                          fontSize: 8,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: groupColor,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                          trailing: PopupMenuButton<String>(
+                                            icon: const Icon(Icons.more_vert, color: Colors.grey),
+                                            onSelected: (val) {
+                                              if (val == 'group') {
+                                                _showGroupDialog(context, ex);
+                                              } else if (val == 'delete') {
+                                                setState(() {
+                                                  _selectedExercises.removeAt(idx);
+                                                  _exerciseGroups.remove(ex.id);
+                                                });
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                value: 'group',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.group_work, size: 20),
+                                                    SizedBox(width: 8),
+                                                    Text("Associer à un groupe"),
+                                                  ],
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.remove_circle_outline, size: 20, color: Colors.redAccent),
+                                                    SizedBox(width: 8),
+                                                    Text("Retirer", style: TextStyle(color: Colors.redAccent)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
@@ -468,18 +552,117 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
       final provider = Provider.of<WorkoutProvider>(context, listen: false);
 
       if (widget.program == null) {
-        provider.createProgram(_name, _description, _selectedExercises);
+        provider.createProgram(_name, _description, _selectedExercises, _exerciseGroups);
       } else {
         final updated = WorkoutProgram(
           id: widget.program!.id,
           name: _name,
           description: _description,
           exercises: _selectedExercises,
+          exerciseGroups: _exerciseGroups,
         );
         provider.updateProgram(updated);
       }
 
       Navigator.pop(context);
     }
+  }
+
+  Color _getGroupColor(String groupId) {
+    final colors = [
+      const Color(0xff2563eb), // Blue
+      const Color(0xff10b981), // Green
+      const Color(0xff8b5cf6), // Purple
+      const Color(0xfff59e0b), // Amber/Orange
+      const Color(0xffec4899), // Pink
+      const Color(0xff06b6d4), // Cyan
+    ];
+    final hash = groupId.hashCode.abs();
+    return colors[hash % colors.length];
+  }
+
+  void _showGroupDialog(BuildContext context, Exercise ex) {
+    final existingGroups = _exerciseGroups.values
+        .where((g) => g.isNotEmpty)
+        .toSet()
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        String? newGroupName;
+        return AlertDialog(
+          title: const Text("Associer à un groupe"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (existingGroups.isNotEmpty) ...[
+                  const Text("Groupes existants :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  ...existingGroups.map((group) {
+                    final isCurrent = _exerciseGroups[ex.id] == group;
+                    return ListTile(
+                      title: Text(group),
+                      leading: Icon(Icons.group_work, color: _getGroupColor(group)),
+                      trailing: isCurrent ? const Icon(Icons.check, color: Color(0xff2563eb)) : null,
+                      onTap: () {
+                        setState(() {
+                          _exerciseGroups[ex.id] = group;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                  const Divider(),
+                ],
+                const Text("Nouveau groupe :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Nom du groupe (ex: Superset A)",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onChanged: (val) {
+                    newGroupName = val.trim();
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (_exerciseGroups.containsKey(ex.id) && _exerciseGroups[ex.id]!.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _exerciseGroups.remove(ex.id);
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Retirer du groupe", style: TextStyle(color: Colors.redAccent)),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (newGroupName != null && newGroupName!.isNotEmpty) {
+                          setState(() {
+                            _exerciseGroups[ex.id] = newGroupName!;
+                          });
+                        }
+                        Navigator.pop(context);
+                      },
+                      child: const Text("Créer"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

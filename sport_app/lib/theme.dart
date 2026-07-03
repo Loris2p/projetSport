@@ -23,6 +23,7 @@ class AppTheme {
         onPrimary: Colors.white,
         onSurface: Colors.white,
       ),
+      splashFactory: InkRipple.splashFactory,
       appBarTheme: const AppBarTheme(
         backgroundColor: darkBg,
         elevation: 0,

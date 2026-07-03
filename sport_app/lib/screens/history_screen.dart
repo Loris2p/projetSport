@@ -364,82 +364,135 @@ class SessionDetailScreen extends StatelessWidget {
                 orElse: () => Exercise(id: perfEx.exerciseId, name: 'Exercice Supprimé', category: 'Inconnue'),
               );
 
+              final hasGroup = perfEx.groupId != null && perfEx.groupId!.isNotEmpty;
+              final groupColor = hasGroup ? _getGroupColor(perfEx.groupId!) : null;
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 16.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Exercise Title
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: const Color(0xff2d2d34), borderRadius: BorderRadius.circular(4)),
-                            child: Text(exercise.category, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                          )
-                        ],
-                      ),
-                      if (perfEx.notes != null && perfEx.notes!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          "Notes : ${perfEx.notes}",
-                          style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
+                      if (hasGroup)
+                        Container(
+                          width: 5,
+                          decoration: BoxDecoration(
+                            color: groupColor,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              bottomLeft: Radius.circular(12),
+                            ),
+                          ),
                         ),
-                      ],
-                      const Divider(),
-
-                      // Table/List of sets
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: perfEx.sets.length,
-                        itemBuilder: (context, idx) {
-                          final set = perfEx.sets[idx];
-                          
-                          // Determine type prefix
-                          String typeLabel = "${idx + 1}";
-                          if (set.type == SetType.warmup) typeLabel = "Ech.";
-                          if (set.type == SetType.dropSet) typeLabel = "Drop";
-                          if (set.type == SetType.failure) typeLabel = "Ech.";
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Série $typeLabel",
-                                  style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                                ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (hasGroup) ...[
                                 Row(
                                   children: [
-                                    Text(
-                                      "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps}",
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "(1RM est. ${set.estimated1RM.toStringAsFixed(1).replaceAll('.0', '')} kg)",
-                                      style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                                    ),
-                                    if (set.isWeightPR || set.is1RMPR) ...[
-                                      const SizedBox(width: 4),
-                                      const Tooltip(
-                                        message: "Record battu !",
-                                        child: Text("👑", style: TextStyle(fontSize: 12)),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: groupColor!.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: groupColor, width: 0.8),
                                       ),
-                                    ]
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.group_work, size: 10, color: groupColor),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            perfEx.groupId!,
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: groupColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
-                                )
+                                ),
+                                const SizedBox(height: 8),
                               ],
-                            ),
-                          );
-                        },
-                      )
+                              // Exercise Title
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(color: const Color(0xff2d2d34), borderRadius: BorderRadius.circular(4)),
+                                    child: Text(exercise.category, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  )
+                                ],
+                              ),
+                              if (perfEx.notes != null && perfEx.notes!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Notes : ${perfEx.notes}",
+                                  style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
+                                ),
+                              ],
+                              const Divider(),
+
+                              // Table/List of sets
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: perfEx.sets.length,
+                                itemBuilder: (context, idx) {
+                                  final set = perfEx.sets[idx];
+                                  
+                                  // Determine type prefix
+                                  String typeLabel = "${idx + 1}";
+                                  if (set.type == SetType.warmup) typeLabel = "Ech.";
+                                  if (set.type == SetType.dropSet) typeLabel = "Drop";
+                                  if (set.type == SetType.failure) typeLabel = "Ech.";
+
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Série $typeLabel",
+                                          style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps}",
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              "(1RM est. ${set.estimated1RM.toStringAsFixed(1).replaceAll('.0', '')} kg)",
+                                              style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                            ),
+                                            if (set.isWeightPR || set.is1RMPR) ...[
+                                              const SizedBox(width: 4),
+                                              const Tooltip(
+                                                message: "Record battu !",
+                                                child: Text("👑", style: TextStyle(fontSize: 12)),
+                                              ),
+                                            ]
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                },
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -473,6 +526,19 @@ class SessionDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Color _getGroupColor(String groupId) {
+    final colors = [
+      const Color(0xff2563eb), // Blue
+      const Color(0xff10b981), // Green
+      const Color(0xff8b5cf6), // Purple
+      const Color(0xfff59e0b), // Amber/Orange
+      const Color(0xffec4899), // Pink
+      const Color(0xff06b6d4), // Cyan
+    ];
+    final hash = groupId.hashCode.abs();
+    return colors[hash % colors.length];
   }
 
   void _confirmDelete(BuildContext context, WorkoutProvider provider) {

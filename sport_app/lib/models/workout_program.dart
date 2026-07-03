@@ -5,12 +5,14 @@ class WorkoutProgram {
   final String name;
   final String description;
   final List<Exercise> exercises;
+  final Map<String, String>? exerciseGroups;
 
   WorkoutProgram({
     required this.id,
     required this.name,
     required this.description,
     required this.exercises,
+    this.exerciseGroups,
   });
 
   Map<String, dynamic> toJson() {
@@ -19,6 +21,7 @@ class WorkoutProgram {
       'name': name,
       'description': description,
       'exercises': exercises.map((e) => e.toJson()).toList(),
+      'exerciseGroups': exerciseGroups,
     };
   }
 
@@ -30,6 +33,9 @@ class WorkoutProgram {
       exercises: (json['exercises'] as List<dynamic>)
           .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
           .toList(),
+      exerciseGroups: json['exerciseGroups'] != null
+          ? Map<String, String>.from(json['exerciseGroups'] as Map)
+          : null,
     );
   }
 }

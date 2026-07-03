@@ -26,7 +26,7 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _sessions = [];
 
-  final List<Exercise> _defaultExercises = [
+  final List<Exercise> _initialDefaultExercises = [
     Exercise(id: 'bench_press', name: 'Développé Couché', category: 'Pectoraux', notes: 'Exercice de base pour les pectoraux'),
     Exercise(id: 'squat', name: 'Squat', category: 'Jambes', notes: 'Exercice roi pour le bas du corps'),
     Exercise(id: 'deadlift', name: 'Soulevé de Terre', category: 'Dos', notes: 'Exercice complet pour la chaîne postérieure'),
@@ -40,6 +40,8 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
     Exercise(id: 'incline_dumbell_press', name: 'Développé Incliné (Haltères)', category: 'Pectoraux', notes: 'Cible le haut des pectoraux'),
     Exercise(id: 'lateral_raise', name: 'Élévations Latérales', category: 'Épaules', notes: 'Pour le faisceau moyen des épaules'),
   ];
+
+  List<Exercise> _defaultExercises = [];
 
   @override
   Future<void> init() async {
@@ -58,7 +60,25 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
     return File('${directory.path}/$filename');
   }
 
+  Future<void> _loadDefaultExercises() async {
+    try {
+      final file = await _getFile('default_exercises.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _defaultExercises = jsonList.map((e) => Exercise.fromJson(e as Map<String, dynamic>)).toList();
+      } else {
+        _defaultExercises = List.from(_initialDefaultExercises);
+        final jsonContent = jsonEncode(_defaultExercises.map((e) => e.toJson()).toList());
+        await file.writeAsString(jsonContent);
+      }
+    } catch (e) {
+      _defaultExercises = List.from(_initialDefaultExercises);
+    }
+  }
+
   Future<void> _loadExercises() async {
+    await _loadDefaultExercises();
     try {
       final file = await _getFile('custom_exercises.json');
       if (await file.exists()) {
@@ -114,11 +134,11 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
         name: 'Push (Poussée)',
         description: 'Séance pectoraux, épaules, triceps',
         exercises: [
-          _defaultExercises.firstWhere((e) => e.id == 'bench_press'),
-          _defaultExercises.firstWhere((e) => e.id == 'overhead_press'),
-          _defaultExercises.firstWhere((e) => e.id == 'incline_dumbell_press'),
-          _defaultExercises.firstWhere((e) => e.id == 'lateral_raise'),
-          _defaultExercises.firstWhere((e) => e.id == 'tricep_pushdown'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'bench_press'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'overhead_press'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'incline_dumbell_press'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'lateral_raise'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'tricep_pushdown'),
         ],
       ),
       WorkoutProgram(
@@ -126,11 +146,11 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
         name: 'Pull (Tirage)',
         description: 'Séance dos, biceps, abdominaux',
         exercises: [
-          _defaultExercises.firstWhere((e) => e.id == 'deadlift'),
-          _defaultExercises.firstWhere((e) => e.id == 'pull_up'),
-          _defaultExercises.firstWhere((e) => e.id == 'lat_pulldown'),
-          _defaultExercises.firstWhere((e) => e.id == 'bicep_curl'),
-          _defaultExercises.firstWhere((e) => e.id == 'crunch'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'deadlift'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'pull_up'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'lat_pulldown'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'bicep_curl'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'crunch'),
         ],
       ),
       WorkoutProgram(
@@ -138,8 +158,8 @@ class LocalJsonWorkoutRepository implements WorkoutRepository {
         name: 'Legs (Jambes)',
         description: 'Séance bas du corps complète',
         exercises: [
-          _defaultExercises.firstWhere((e) => e.id == 'squat'),
-          _defaultExercises.firstWhere((e) => e.id == 'leg_press'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'squat'),
+          _initialDefaultExercises.firstWhere((e) => e.id == 'leg_press'),
         ],
       ),
     ];

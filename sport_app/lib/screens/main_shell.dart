@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import 'programs_screen.dart';
 import 'history_screen.dart';
 import 'active_session_screen.dart';
+import 'exercises_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -20,6 +21,7 @@ class _MainShellState extends State<MainShell> {
     DashboardScreen(),
     ProgramsScreen(),
     HistoryScreen(),
+    ExercisesScreen(),
   ];
 
   @override
@@ -51,6 +53,7 @@ class _MainShellState extends State<MainShell> {
         padding: EdgeInsets.only(bottom: activeSession != null ? 70.0 : 0.0),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
+          type: BottomNavigationBarType.fixed,
           onTap: (index) {
             setState(() {
               _currentIndex = index;
@@ -71,6 +74,11 @@ class _MainShellState extends State<MainShell> {
               icon: Icon(Icons.history_outlined),
               activeIcon: Icon(Icons.history),
               label: "Historique",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.fitness_center_outlined),
+              activeIcon: Icon(Icons.fitness_center),
+              label: "Exercices",
             ),
           ],
         ),

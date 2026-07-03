@@ -4,11 +4,13 @@ class PerformedExercise {
   final String exerciseId;
   final List<ExerciseSet> sets;
   String? notes; 
+  String? groupId;
 
   PerformedExercise({
     required this.exerciseId,
     required this.sets,
     this.notes,
+    this.groupId,
   });
 
   Map<String, dynamic> toJson() {
@@ -16,6 +18,7 @@ class PerformedExercise {
       'exerciseId': exerciseId,
       'sets': sets.map((s) => s.toJson()).toList(),
       'notes': notes,
+      'groupId': groupId,
     };
   }
 
@@ -26,6 +29,7 @@ class PerformedExercise {
           .map((s) => ExerciseSet.fromJson(s as Map<String, dynamic>))
           .toList(),
       notes: json['notes'] as String?,
+      groupId: json['groupId'] as String?,
     );
   }
 }
