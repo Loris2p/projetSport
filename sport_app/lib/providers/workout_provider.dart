@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/exercise.dart';
 import '../models/exercise_set.dart';
@@ -23,13 +24,25 @@ class WorkoutProvider with ChangeNotifier {
 
   // Rest Timer State
   int _restTimerDuration = 90; // Default 90s
-  int _restTimerRemaining = 0;
   Timer? _timer;
   bool _isRestTimerActive = false;
 
   // Active Session Duration Timer
   Timer? _sessionDurationTimer;
-  Duration _sessionDuration = Duration.zero;
+
+  // ValueNotifiers to avoid calling notifyListeners() on global provider every second
+  final ValueNotifier<Duration> sessionDurationNotifier = ValueNotifier<Duration>(Duration.zero);
+  final ValueNotifier<int> restTimerRemainingNotifier = ValueNotifier<int>(0);
+
+  // Memory cache for session volumes and PRs to avoid heavy rebuild/scroll lookups
+  final Map<String, double> _sessionVolumeCache = {};
+  final Map<String, List<Map<String, dynamic>>> _sessionPRsCache = {};
+
+  // Memory caches for menu performance
+  List<dynamic> _flatHistory = [];
+  double _weeklyVolume = 0.0;
+  int _weeklyWorkoutsCount = 0;
+  final Map<String, String> _sessionExercisesSummaryCache = {};
 
   WorkoutProvider({
     required this.repository,
@@ -43,10 +56,14 @@ class WorkoutProvider with ChangeNotifier {
   WorkoutSession? get activeSession => _activeSession;
   bool get isLoading => _isLoading;
 
+  List<dynamic> get flatHistory => _flatHistory;
+  double get weeklyVolume => _weeklyVolume;
+  int get weeklyWorkoutsCount => _weeklyWorkoutsCount;
+
   int get restTimerDuration => _restTimerDuration;
-  int get restTimerRemaining => _restTimerRemaining;
+  int get restTimerRemaining => restTimerRemainingNotifier.value;
   bool get isRestTimerActive => _isRestTimerActive;
-  Duration get sessionDuration => _sessionDuration;
+  Duration get sessionDuration => sessionDurationNotifier.value;
 
   Future<void> init() async {
     _isLoading = true;
@@ -56,6 +73,8 @@ class WorkoutProvider with ChangeNotifier {
     _exercises = repository.getExercises();
     _programs = repository.getPrograms();
     _history = repository.getHistory();
+
+    _updateWeeklyStatsAndFlatHistory();
 
     _isLoading = false;
     notifyListeners();
@@ -78,6 +97,9 @@ class WorkoutProvider with ChangeNotifier {
   Future<void> deleteExercise(String id) async {
     await repository.deleteExercise(id);
     _exercises = repository.getExercises();
+    _sessionExercisesSummaryCache.clear();
+    _sessionPRsCache.clear();
+    _updateWeeklyStatsAndFlatHistory();
     notifyListeners();
   }
 
@@ -109,6 +131,10 @@ class WorkoutProvider with ChangeNotifier {
   Future<void> deleteSession(String id) async {
     await repository.deleteSession(id);
     _history = repository.getHistory();
+    _sessionVolumeCache.remove(id);
+    _sessionPRsCache.remove(id);
+    _sessionExercisesSummaryCache.remove(id);
+    _updateWeeklyStatsAndFlatHistory();
     notifyListeners();
   }
 
@@ -143,12 +169,11 @@ class WorkoutProvider with ChangeNotifier {
     );
 
     // Start global session duration timer
-    _sessionDuration = Duration.zero;
+    sessionDurationNotifier.value = Duration.zero;
     _sessionDurationTimer?.cancel();
     _sessionDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_activeSession != null) {
-        _sessionDuration = DateTime.now().difference(_activeSession!.startTime);
-        notifyListeners();
+        sessionDurationNotifier.value = DateTime.now().difference(_activeSession!.startTime);
       }
     });
 
@@ -277,21 +302,20 @@ class WorkoutProvider with ChangeNotifier {
   void setRestTimerDuration(int seconds) {
     _restTimerDuration = seconds;
     if (_isRestTimerActive) {
-      _restTimerRemaining = seconds;
+      restTimerRemainingNotifier.value = seconds;
     }
     notifyListeners();
   }
 
   void startRestTimer([int? duration]) {
     _timer?.cancel();
-    _restTimerRemaining = duration ?? _restTimerDuration;
+    restTimerRemainingNotifier.value = duration ?? _restTimerDuration;
     _isRestTimerActive = true;
     notifyListeners();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_restTimerRemaining > 0) {
-        _restTimerRemaining--;
-        notifyListeners();
+      if (restTimerRemainingNotifier.value > 0) {
+        restTimerRemainingNotifier.value--;
       } else {
         stopRestTimer();
       }
@@ -301,14 +325,14 @@ class WorkoutProvider with ChangeNotifier {
   void stopRestTimer() {
     _timer?.cancel();
     _isRestTimerActive = false;
-    _restTimerRemaining = 0;
+    restTimerRemainingNotifier.value = 0;
     notifyListeners();
   }
 
   void cancelActiveSession() {
     _activeSession = null;
     _sessionDurationTimer?.cancel();
-    _sessionDuration = Duration.zero;
+    sessionDurationNotifier.value = Duration.zero;
     stopRestTimer();
     notifyListeners();
   }
@@ -380,10 +404,16 @@ class WorkoutProvider with ChangeNotifier {
     }
 
     // Clean up
+    if (finalSession.id.isNotEmpty) {
+      _sessionVolumeCache.remove(finalSession.id);
+      _sessionPRsCache.remove(finalSession.id);
+      _sessionExercisesSummaryCache.remove(finalSession.id);
+    }
     _activeSession = null;
     _sessionDurationTimer?.cancel();
-    _sessionDuration = Duration.zero;
+    sessionDurationNotifier.value = Duration.zero;
     stopRestTimer();
+    _updateWeeklyStatsAndFlatHistory();
     notifyListeners();
   }
 
@@ -439,8 +469,11 @@ class WorkoutProvider with ChangeNotifier {
     set.is1RMPR = set.estimated1RM > 0 && (best1RM == 0 || set.estimated1RM > best1RM);
   }
 
-  // Calculate volume of a session
+  // Calculate volume of a session (using memory cache)
   double calculateSessionVolume(WorkoutSession session) {
+    if (_sessionVolumeCache.containsKey(session.id)) {
+      return _sessionVolumeCache[session.id]!;
+    }
     double volume = 0;
     for (var perfEx in session.exercises) {
       for (var s in perfEx.sets) {
@@ -449,6 +482,7 @@ class WorkoutProvider with ChangeNotifier {
         }
       }
     }
+    _sessionVolumeCache[session.id] = volume;
     return volume;
   }
 
@@ -472,8 +506,11 @@ class WorkoutProvider with ChangeNotifier {
     return _history.where((s) => s.startTime.isAfter(sevenDaysAgo)).length;
   }
 
-  // Get all PRs broken in a specific session
+  // Get all PRs broken in a specific session (using memory cache)
   List<Map<String, dynamic>> getSessionPRs(WorkoutSession session) {
+    if (_sessionPRsCache.containsKey(session.id)) {
+      return _sessionPRsCache[session.id]!;
+    }
     final List<Map<String, dynamic>> prList = [];
     for (var perfEx in session.exercises) {
       final exercise = _exercises.firstWhere((e) => e.id == perfEx.exerciseId, 
@@ -505,6 +542,7 @@ class WorkoutProvider with ChangeNotifier {
         });
       }
     }
+    _sessionPRsCache[session.id] = prList;
     return prList;
   }
 
@@ -512,6 +550,53 @@ class WorkoutProvider with ChangeNotifier {
   void dispose() {
     _timer?.cancel();
     _sessionDurationTimer?.cancel();
+    sessionDurationNotifier.dispose();
+    restTimerRemainingNotifier.dispose();
     super.dispose();
+  }
+
+  // Helper to re-calculate stats and cached flat lists
+  void _updateWeeklyStatsAndFlatHistory() {
+    // 1. Flat history list
+    final List<dynamic> flatList = [];
+    String? currentMonthYear;
+    for (var session in _history) {
+      final String monthYear = DateFormat('MMMM yyyy', 'fr_FR').format(session.startTime);
+      final String capitalized = monthYear[0].toUpperCase() + monthYear.substring(1);
+      if (capitalized != currentMonthYear) {
+        currentMonthYear = capitalized;
+        flatList.add(capitalized);
+      }
+      flatList.add(session);
+    }
+    _flatHistory = flatList;
+
+    // 2. Weekly stats
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    double volume = 0;
+    int count = 0;
+    for (var session in _history) {
+      if (session.startTime.isAfter(sevenDaysAgo)) {
+        volume += calculateSessionVolume(session);
+        count++;
+      }
+    }
+    _weeklyVolume = volume;
+    _weeklyWorkoutsCount = count;
+  }
+
+  // Get exercise names as summary (using memory cache)
+  String getSessionExercisesSummary(WorkoutSession session) {
+    if (_sessionExercisesSummaryCache.containsKey(session.id)) {
+      return _sessionExercisesSummaryCache[session.id]!;
+    }
+    final String summary = session.exercises.map((pe) {
+      final ex = _exercises.firstWhere((e) => e.id == pe.exerciseId,
+          orElse: () => Exercise(id: pe.exerciseId, name: 'Exercice', category: 'Inconnue'));
+      return ex.name;
+    }).join(', ');
+    _sessionExercisesSummaryCache[session.id] = summary;
+    return summary;
   }
 }

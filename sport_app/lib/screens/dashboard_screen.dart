@@ -18,9 +18,9 @@ class DashboardScreen extends StatelessWidget {
         ? formattedDate[0].toUpperCase() + formattedDate.substring(1)
         : '';
 
-    // Calculate volume in tons
-    final double weeklyVolumeTons = workoutProvider.getWeeklyVolume() / 1000.0;
-    final int weeklyWorkouts = workoutProvider.getWeeklyWorkoutsCount();
+    // Calculate volume in tons (using memory cached values)
+    final double weeklyVolumeTons = workoutProvider.weeklyVolume / 1000.0;
+    final int weeklyWorkouts = workoutProvider.weeklyWorkoutsCount;
 
     // Get latest program for quick resume shortcut
     final programs = workoutProvider.programs;

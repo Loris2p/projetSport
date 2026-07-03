@@ -258,184 +258,185 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Text Fields
-                    TextFormField(
-                      initialValue: _name,
-                      decoration: const InputDecoration(
-                        labelText: "Nom du programme",
-                        border: OutlineInputBorder(),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xff2563eb)),
-                        ),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(16.0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Text Fields
+                  TextFormField(
+                    initialValue: _name,
+                    decoration: const InputDecoration(
+                      labelText: "Nom du programme",
+                      border: OutlineInputBorder(),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xff2563eb)),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Le nom est requis";
-                        }
-                        return null;
-                      },
-                      onSaved: (value) => _name = value!.trim(),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      initialValue: _description,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
-                        border: OutlineInputBorder(),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xff2563eb)),
-                        ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Le nom est requis";
+                      }
+                      return null;
+                    },
+                    onSaved: (value) => _name = value!.trim(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    initialValue: _description,
+                    decoration: const InputDecoration(
+                      labelText: "Description",
+                      border: OutlineInputBorder(),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xff2563eb)),
                       ),
-                      onSaved: (value) => _description = value?.trim() ?? '',
                     ),
-                    const SizedBox(height: 24),
+                    onSaved: (value) => _description = value?.trim() ?? '',
+                  ),
+                  const SizedBox(height: 24),
 
-                    // Selected Exercises Reorderable List
-                    const Text(
-                      "Ordre des exercices (glissez-déposez)",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    const SizedBox(height: 8),
-                    _selectedExercises.isEmpty
-                        ? Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xff1e1e24),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xff2d2d34)),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Aucun exercice sélectionné. Ajoutez-en ci-dessous !",
-                                style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                        : SizedBox(
-                            height: 220,
-                            child: ReorderableListView(
-                              // ignore: deprecated_member_use
-                              onReorder: _onReorderExercises,
-                              children: _selectedExercises.asMap().entries.map((entry) {
-                                final idx = entry.key;
-                                final ex = entry.value;
-                                return Card(
-                                  key: ValueKey(ex.id),
-                                  margin: const EdgeInsets.symmetric(vertical: 4.0),
-                                  color: const Color(0xff1e1e24),
-                                  child: ListTile(
-                                    leading: const Icon(Icons.drag_handle, color: Colors.grey),
-                                    title: Text(ex.name),
-                                    subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedExercises.removeAt(idx);
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                  // Selected Exercises Reorderable List
+                  const Text(
+                    "Ordre des exercices (glissez-déposez)",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
+                  _selectedExercises.isEmpty
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff1e1e24),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xff2d2d34)),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "Aucun exercice sélectionné. Ajoutez-en ci-dessous !",
+                              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                    const SizedBox(height: 24),
-
-                    // Exercise Catalog Picker Title
-                    const Text(
-                      "Sélectionner des exercices",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Search & Filters inside Picker
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: "Rechercher...",
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                              fillColor: const Color(0xff1e1e24),
-                              filled: true,
-                            ),
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        DropdownButton<String>(
-                          value: _selectedCategory,
-                          dropdownColor: const Color(0xff1e1e24),
-                          underline: const SizedBox(),
-                          icon: const Icon(Icons.filter_list),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _selectedCategory = newValue;
-                              });
-                            }
-                          },
-                          items: categories.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value, style: const TextStyle(fontSize: 14)),
-                            );
-                          }).toList(),
                         )
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Catalog List
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredExercises.length,
-                      itemBuilder: (context, index) {
-                        final ex = filteredExercises[index];
-                        final isAlreadySelected = _selectedExercises.any((e) => e.id == ex.id);
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: ListTile(
-                            title: Text(ex.name),
-                            subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                            trailing: isAlreadySelected
-                                ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
-                                : const Icon(Icons.add_circle_outline, color: Colors.grey),
-                            onTap: () {
-                              setState(() {
-                                if (isAlreadySelected) {
-                                  _selectedExercises.removeWhere((e) => e.id == ex.id);
-                                } else {
-                                  _selectedExercises.add(ex);
-                                }
-                              });
-                            },
+                      : SizedBox(
+                          height: 220,
+                          child: ReorderableListView(
+                            // ignore: deprecated_member_use
+                            onReorder: _onReorderExercises,
+                            children: _selectedExercises.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final ex = entry.value;
+                              return Card(
+                                key: ValueKey(ex.id),
+                                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                                color: const Color(0xff1e1e24),
+                                child: ListTile(
+                                  leading: const Icon(Icons.drag_handle, color: Colors.grey),
+                                  title: Text(ex.name),
+                                  subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedExercises.removeAt(idx);
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        );
-                      },
-                    ),
-                  ],
+                        ),
+                  const SizedBox(height: 24),
+
+                  // Exercise Catalog Picker Title
+                  const Text(
+                    "Sélectionner des exercices",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Search & Filters inside Picker
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: "Rechercher...",
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                            fillColor: const Color(0xff1e1e24),
+                            filled: true,
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      DropdownButton<String>(
+                        value: _selectedCategory,
+                        dropdownColor: const Color(0xff1e1e24),
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.filter_list),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedCategory = newValue;
+                            });
+                          }
+                        },
+                        items: categories.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value, style: const TextStyle(fontSize: 14)),
+                          );
+                        }).toList(),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ]),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final ex = filteredExercises[index];
+                    final isAlreadySelected = _selectedExercises.any((e) => e.id == ex.id);
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: ListTile(
+                        title: Text(ex.name),
+                        subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        trailing: isAlreadySelected
+                            ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
+                            : const Icon(Icons.add_circle_outline, color: Colors.grey),
+                        onTap: () {
+                          setState(() {
+                            if (isAlreadySelected) {
+                              _selectedExercises.removeWhere((e) => e.id == ex.id);
+                            } else {
+                              _selectedExercises.add(ex);
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  },
+                  childCount: filteredExercises.length,
                 ),
               ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 32),
             ),
           ],
         ),

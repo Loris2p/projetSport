@@ -38,48 +38,32 @@ class HistoryScreen extends StatelessWidget {
       );
     }
 
-    // Group workouts by Month (e.g., "Juin 2026")
-    final Map<String, List<WorkoutSession>> groupedSessions = {};
-    for (var session in history) {
-      final String monthYear = DateFormat('MMMM yyyy', 'fr_FR').format(session.startTime);
-      final String capitalized = monthYear[0].toUpperCase() + monthYear.substring(1);
-      if (!groupedSessions.containsKey(capitalized)) {
-        groupedSessions[capitalized] = [];
-      }
-      groupedSessions[capitalized]!.add(session);
-    }
+    final flatItems = workoutProvider.flatHistory;
 
     return Scaffold(
       appBar: AppBar(title: const Text("Historique")),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
-        itemCount: groupedSessions.keys.length,
+        itemCount: flatItems.length,
         itemBuilder: (context, index) {
-          final String monthHeader = groupedSessions.keys.elementAt(index);
-          final List<WorkoutSession> sessions = groupedSessions[monthHeader]!;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Month Header
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0, bottom: 12.0, left: 4.0),
-                child: Text(
-                  monthHeader,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff2563eb),
-                    letterSpacing: 1.1,
-                  ),
+          final item = flatItems[index];
+          if (item is String) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 16.0, bottom: 12.0, left: 4.0),
+              child: Text(
+                item,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xff2563eb),
+                  letterSpacing: 1.1,
                 ),
               ),
-              // Sessions list in this month
-              ...sessions.map((session) {
-                return _buildHistoryCard(context, session, workoutProvider);
-              }),
-            ],
-          );
+            );
+          } else if (item is WorkoutSession) {
+            return _buildHistoryCard(context, item, workoutProvider);
+          }
+          return const SizedBox.shrink();
         },
       ),
     );
@@ -102,12 +86,8 @@ class HistoryScreen extends StatelessWidget {
     final String dayFormatted = DateFormat('d MMM', 'fr_FR').format(session.startTime);
     final String timeFormatted = DateFormat('HH:mm').format(session.startTime);
 
-    // Get exercise names as summary
-    final String exercisesSummary = session.exercises.map((pe) {
-      final ex = provider.exercises.firstWhere((e) => e.id == pe.exerciseId,
-          orElse: () => Exercise(id: pe.exerciseId, name: 'Exercice', category: 'Inconnue'));
-      return ex.name;
-    }).join(', ');
+    // Get exercise names as summary (using memory cache)
+    final String exercisesSummary = provider.getSessionExercisesSummary(session);
 
     // Detect if this session broke any PRs
     final prsBroken = provider.getSessionPRs(session);

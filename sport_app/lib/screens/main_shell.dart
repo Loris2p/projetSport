@@ -80,8 +80,6 @@ class _MainShellState extends State<MainShell> {
 
   Widget _buildActiveWorkoutBar(BuildContext context, WorkoutProvider provider) {
     final session = provider.activeSession!;
-    final duration = provider.sessionDuration;
-    final String durationString = '${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}';
 
     return GestureDetector(
       onTap: () {
@@ -112,9 +110,15 @@ class _MainShellState extends State<MainShell> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      "Entraînement en cours • $durationString",
-                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    ValueListenableBuilder<Duration>(
+                      valueListenable: provider.sessionDurationNotifier,
+                      builder: (context, duration, _) {
+                        final String durationString = '${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}';
+                        return Text(
+                          "Entraînement en cours • $durationString",
+                          style: const TextStyle(fontSize: 11, color: Colors.white70),
+                        );
+                      },
                     ),
                   ],
                 ),
