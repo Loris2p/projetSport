@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
+import '../models/program_exercise.dart';
 import '../providers/workout_provider.dart';
 import 'active_session_screen.dart';
 
@@ -104,7 +105,11 @@ class ProgramsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           ...program.exercises.asMap().entries.map((entry) {
             final idx = entry.key;
-            final ex = entry.value;
+            final progEx = entry.value;
+            final ex = provider.exercises.firstWhere(
+              (e) => e.id == progEx.exerciseId,
+              orElse: () => Exercise(id: progEx.exerciseId, name: "Exercice Supprimé", category: "Inconnue"),
+            );
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Row(
@@ -115,7 +120,7 @@ class ProgramsScreen extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      ex.name,
+                      "${ex.name} (${progEx.setsCount}x${progEx.repsCount}, repos : ${progEx.restTime}s)",
                       style: const TextStyle(fontSize: 14),
                     ),
                   ),
@@ -213,7 +218,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
   late String _description;
-  List<Exercise> _selectedExercises = [];
+  List<ProgramExercise> _selectedExercises = [];
   final Map<String, String> _exerciseGroups = {};
   String _searchQuery = '';
   String _selectedCategory = 'Tous';
@@ -323,114 +328,221 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                             ),
                           ),
                         )
-                      : SizedBox(
-                          height: 220,
-                          child: ReorderableListView(
-                            // ignore: deprecated_member_use
-                            onReorder: _onReorderExercises,
-                            children: _selectedExercises.asMap().entries.map((entry) {
-                              final idx = entry.key;
-                              final ex = entry.value;
-                              final hasGroup = _exerciseGroups.containsKey(ex.id) && _exerciseGroups[ex.id]!.isNotEmpty;
-                              final groupColor = hasGroup ? _getGroupColor(_exerciseGroups[ex.id]!) : null;
+                      : ReorderableListView(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          onReorder: _onReorderExercises,
+                          children: _selectedExercises.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final progEx = entry.value;
+                            final ex = allExercises.firstWhere(
+                              (e) => e.id == progEx.exerciseId,
+                              orElse: () => Exercise(id: progEx.exerciseId, name: "Exercice Supprimé", category: "Inconnue"),
+                            );
+                            final hasGroup = _exerciseGroups.containsKey(ex.id) && _exerciseGroups[ex.id]!.isNotEmpty;
+                            final groupColor = hasGroup ? _getGroupColor(_exerciseGroups[ex.id]!) : null;
 
-                              return Card(
-                                key: ValueKey(ex.id),
-                                margin: const EdgeInsets.symmetric(vertical: 4.0),
-                                color: const Color(0xff1e1e24),
-                                child: IntrinsicHeight(
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      if (hasGroup)
-                                        Container(
-                                          width: 5,
-                                          decoration: BoxDecoration(
-                                            color: groupColor,
-                                            borderRadius: const BorderRadius.only(
-                                              topLeft: Radius.circular(12),
-                                              bottomLeft: Radius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      Expanded(
-                                        child: ListTile(
-                                          leading: const Icon(Icons.drag_handle, color: Colors.grey),
-                                          title: Row(
-                                            children: [
-                                              Expanded(child: Text(ex.name)),
-                                              if (hasGroup) ...[
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: groupColor!.withValues(alpha: 0.15),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                    border: Border.all(color: groupColor, width: 0.8),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.group_work, size: 8, color: groupColor),
-                                                      const SizedBox(width: 2),
-                                                      Text(
-                                                        _exerciseGroups[ex.id]!,
-                                                        style: TextStyle(
-                                                          fontSize: 8,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: groupColor,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                          subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                          trailing: PopupMenuButton<String>(
-                                            icon: const Icon(Icons.more_vert, color: Colors.grey),
-                                            onSelected: (val) {
-                                              if (val == 'group') {
-                                                _showGroupDialog(context, ex);
-                                              } else if (val == 'delete') {
-                                                setState(() {
-                                                  _selectedExercises.removeAt(idx);
-                                                  _exerciseGroups.remove(ex.id);
-                                                });
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              const PopupMenuItem(
-                                                value: 'group',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.group_work, size: 20),
-                                                    SizedBox(width: 8),
-                                                    Text("Associer à un groupe"),
-                                                  ],
-                                                ),
-                                              ),
-                                              const PopupMenuItem(
-                                                value: 'delete',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.remove_circle_outline, size: 20, color: Colors.redAccent),
-                                                    SizedBox(width: 8),
-                                                    Text("Retirer", style: TextStyle(color: Colors.redAccent)),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
+                            return Card(
+                              key: ValueKey(progEx.exerciseId),
+                              margin: const EdgeInsets.symmetric(vertical: 4.0),
+                              color: const Color(0xff1e1e24),
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (hasGroup)
+                                      Container(
+                                        width: 5,
+                                        decoration: BoxDecoration(
+                                          color: groupColor,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            bottomLeft: Radius.circular(12),
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(bottom: 12.0),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            ListTile(
+                                              dense: true,
+                                              leading: const Icon(Icons.drag_handle, color: Colors.grey),
+                                              title: Row(
+                                                children: [
+                                                  Expanded(child: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                                                  if (hasGroup) ...[
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: groupColor!.withValues(alpha: 0.15),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(color: groupColor, width: 0.8),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.group_work, size: 8, color: groupColor),
+                                                          const SizedBox(width: 2),
+                                                          Text(
+                                                            _exerciseGroups[ex.id]!,
+                                                            style: TextStyle(
+                                                              fontSize: 8,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: groupColor,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                              trailing: PopupMenuButton<String>(
+                                                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                                                onSelected: (val) {
+                                                  if (val == 'group') {
+                                                    _showGroupDialog(context, ex);
+                                                  } else if (val == 'delete') {
+                                                    setState(() {
+                                                      _selectedExercises.removeAt(idx);
+                                                      _exerciseGroups.remove(ex.id);
+                                                    });
+                                                  }
+                                                },
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem(
+                                                    value: 'group',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.group_work, size: 20),
+                                                        SizedBox(width: 8),
+                                                        Text("Associer à un groupe"),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.remove_circle_outline, size: 20, color: Colors.redAccent),
+                                                        SizedBox(width: 8),
+                                                        Text("Retirer", style: TextStyle(color: Colors.redAccent)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextFormField(
+                                                      initialValue: progEx.setsCount.toString(),
+                                                      keyboardType: TextInputType.number,
+                                                      style: const TextStyle(fontSize: 13),
+                                                      decoration: const InputDecoration(
+                                                        labelText: "Séries",
+                                                        labelStyle: TextStyle(fontSize: 11),
+                                                        isDense: true,
+                                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      validator: (val) {
+                                                        if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0) {
+                                                          return "Min 1";
+                                                        }
+                                                        return null;
+                                                      },
+                                                      onSaved: (val) {
+                                                        final count = int.parse(val!);
+                                                        _selectedExercises[idx] = ProgramExercise(
+                                                          exerciseId: progEx.exerciseId,
+                                                          setsCount: count,
+                                                          repsCount: _selectedExercises[idx].repsCount,
+                                                          restTime: _selectedExercises[idx].restTime,
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: TextFormField(
+                                                      initialValue: progEx.repsCount.toString(),
+                                                      keyboardType: TextInputType.number,
+                                                      style: const TextStyle(fontSize: 13),
+                                                      decoration: const InputDecoration(
+                                                        labelText: "Répétitions",
+                                                        labelStyle: TextStyle(fontSize: 11),
+                                                        isDense: true,
+                                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      validator: (val) {
+                                                        if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0) {
+                                                          return "Min 1";
+                                                        }
+                                                        return null;
+                                                      },
+                                                      onSaved: (val) {
+                                                        final count = int.parse(val!);
+                                                        _selectedExercises[idx] = ProgramExercise(
+                                                          exerciseId: progEx.exerciseId,
+                                                          setsCount: _selectedExercises[idx].setsCount,
+                                                          repsCount: count,
+                                                          restTime: _selectedExercises[idx].restTime,
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: TextFormField(
+                                                      initialValue: progEx.restTime.toString(),
+                                                      keyboardType: TextInputType.number,
+                                                      style: const TextStyle(fontSize: 13),
+                                                      decoration: const InputDecoration(
+                                                        labelText: "Repos (s)",
+                                                        labelStyle: TextStyle(fontSize: 11),
+                                                        isDense: true,
+                                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      validator: (val) {
+                                                        if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) < 0) {
+                                                          return "Min 0";
+                                                        }
+                                                        return null;
+                                                      },
+                                                      onSaved: (val) {
+                                                        final count = int.parse(val!);
+                                                        _selectedExercises[idx] = ProgramExercise(
+                                                          exerciseId: progEx.exerciseId,
+                                                          setsCount: _selectedExercises[idx].setsCount,
+                                                          repsCount: _selectedExercises[idx].repsCount,
+                                                          restTime: count,
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                   const SizedBox(height: 24),
 
@@ -493,7 +605,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final ex = filteredExercises[index];
-                    final isAlreadySelected = _selectedExercises.any((e) => e.id == ex.id);
+                    final isAlreadySelected = _selectedExercises.any((e) => e.exerciseId == ex.id);
 
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -506,9 +618,16 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                         onTap: () {
                           setState(() {
                             if (isAlreadySelected) {
-                              _selectedExercises.removeWhere((e) => e.id == ex.id);
+                              _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
                             } else {
-                              _selectedExercises.add(ex);
+                              _selectedExercises.add(
+                                ProgramExercise(
+                                  exerciseId: ex.id,
+                                  setsCount: 3,
+                                  repsCount: 10,
+                                  restTime: 90,
+                                ),
+                              );
                             }
                           });
                         },

@@ -34,15 +34,36 @@ class LocalstoreWorkoutRepository implements WorkoutRepository {
 
   // Charge les données de Localstore en mémoire cache synchrone
   Future<void> _loadFromLocalstore() async {
-    // 1. Charger les exercices
-    final exercisesMap = await _db.collection(_exercisesCollection).get();
-    if (exercisesMap != null && exercisesMap.isNotEmpty) {
-      _exercises = exercisesMap.values
+    // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur)
+    final List<Exercise> loadedExercises = [];
+
+    // Si l'utilisateur n'est pas l'administrateur, on charge d'abord les exercices globaux de l'admin
+    if (_userId != 'admin_uid_global') {
+      final globalExercisesMap = await _db.collection('exercises_admin_uid_global').get();
+      if (globalExercisesMap != null && globalExercisesMap.isNotEmpty) {
+        loadedExercises.addAll(
+          globalExercisesMap.values
+              .map((e) => Exercise.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList(),
+        );
+      }
+    }
+
+    // Charger les exercices personnels/custom de l'utilisateur actuel
+    final userExercisesMap = await _db.collection(_exercisesCollection).get();
+    if (userExercisesMap != null && userExercisesMap.isNotEmpty) {
+      final userExercises = userExercisesMap.values
           .map((e) => Exercise.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-    } else {
-      _exercises = [];
+
+      for (var ex in userExercises) {
+        if (!loadedExercises.any((e) => e.id == ex.id)) {
+          loadedExercises.add(ex);
+        }
+      }
     }
+
+    _exercises = loadedExercises;
 
     // 2. Charger les programmes
     final programsMap = await _db.collection(_programsCollection).get();

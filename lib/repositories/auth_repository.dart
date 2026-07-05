@@ -24,7 +24,22 @@ class LocalMockAuthRepository implements AuthRepository {
 
   @override
   Future<void> init() async {
-    // Aucune donnée hardcodée dans le code.
+    // Charger l'utilisateur de test depuis le .env s'il existe
+    final testEmail = dotenv.env['USER_EMAIL']?.trim();
+    final testPassword = dotenv.env['USER_PASSWORD'];
+    final testName = dotenv.env['USER_NAME']?.trim() ?? 'Utilisateur Test';
+
+    if (testEmail != null && testPassword != null) {
+      final hashedPassword = _hashPassword(testPassword);
+      final testUid = 'test_user_uid_global';
+      _mockUsers[testUid] = {
+        'uid': testUid,
+        'email': testEmail.toLowerCase(),
+        'displayName': testName,
+        'isAdmin': false,
+        'password': hashedPassword,
+      };
+    }
   }
 
   // Hachage du mot de passe en SHA-256 pour éviter d'avoir du texte brut en mémoire

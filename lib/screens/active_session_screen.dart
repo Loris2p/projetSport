@@ -274,12 +274,20 @@ class ActiveSessionScreen extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     // Sets Header
-                    const Row(
+                    Row(
                       children: [
-                        SizedBox(width: 45, child: Text("SÉRIE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
-                        Expanded(flex: 3, child: Center(child: Text("POIDS (KG)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                        Expanded(flex: 3, child: Center(child: Text("RÉPETS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                        SizedBox(width: 45, child: Center(child: Text("OK", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        const SizedBox(width: 45, child: Text("SÉRIE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
+                        if (exercise.type == ExerciseType.reps) ...[
+                          const Expanded(flex: 3, child: Center(child: Text("POIDS (KG)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                          const Expanded(flex: 3, child: Center(child: Text("RÉPETS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        ] else if (exercise.type == ExerciseType.time) ...[
+                          const Expanded(flex: 3, child: Center(child: Text("RÉSISTANCE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                          const Expanded(flex: 3, child: Center(child: Text("TEMPS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        ] else if (exercise.type == ExerciseType.distance) ...[
+                          const Expanded(flex: 3, child: Center(child: Text("DISTANCE (KM)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                          const Expanded(flex: 3, child: Center(child: Text("TEMPS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        ],
+                        const SizedBox(width: 45, child: Center(child: Text("OK", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
                       ],
                     ),
                     const Divider(),
@@ -327,6 +335,19 @@ class ActiveSessionScreen extends StatelessWidget {
     WorkoutProvider provider,
   ) {
     final bool isCompleted = set.isCompleted;
+    final exercise = provider.exercises.firstWhere(
+      (e) => e.id == perfEx.exerciseId,
+      orElse: () => Exercise(id: perfEx.exerciseId, name: "Exercice Supprimé", category: "Inconnue"),
+    );
+
+    String formatDuration(int seconds) {
+      final m = seconds ~/ 60;
+      final s = seconds % 60;
+      if (m > 0) {
+        return "$m:${s.toString().padLeft(2, '0')}";
+      }
+      return "${s}s";
+    }
 
     // Determine background color based on completion state
     final Color rowBg = isCompleted ? const Color(0xff142f23) : Colors.transparent;
@@ -375,72 +396,134 @@ class ActiveSessionScreen extends StatelessWidget {
             ),
           ),
 
-          // Weight Controller
+          // Weight/Resistance/Distance Column (Column 2)
           Expanded(
             flex: 3,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildIncrementButton(
-                  icon: Icons.remove,
-                  onPressed: isCompleted ? null : () {
-                    final newVal = (set.weight - 2.5).clamp(0.0, 500.0);
-                    provider.updateSetMetrics(set, newVal, set.reps);
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: isCompleted ? Colors.grey[400] : Colors.white,
+                if (exercise.type == ExerciseType.distance) ...[
+                  // Distance controller
+                  _buildIncrementButton(
+                    icon: Icons.remove,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.distance - 0.1).clamp(0.0, 100.0);
+                      provider.updateSetMetrics(set, set.weight, set.reps, distance: newVal);
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      "${set.distance.toStringAsFixed(1)} km",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isCompleted ? Colors.grey[400] : Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                _buildIncrementButton(
-                  icon: Icons.add,
-                  onPressed: isCompleted ? null : () {
-                    final newVal = (set.weight + 2.5).clamp(0.0, 500.0);
-                    provider.updateSetMetrics(set, newVal, set.reps);
-                  },
-                ),
+                  _buildIncrementButton(
+                    icon: Icons.add,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.distance + 0.1).clamp(0.0, 100.0);
+                      provider.updateSetMetrics(set, set.weight, set.reps, distance: newVal);
+                    },
+                  ),
+                ] else ...[
+                  // Weight/Resistance controller (for reps & time)
+                  _buildIncrementButton(
+                    icon: Icons.remove,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.weight - 2.5).clamp(0.0, 500.0);
+                      provider.updateSetMetrics(set, newVal, set.reps);
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      exercise.type == ExerciseType.time 
+                          ? "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} lvl"
+                          : "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isCompleted ? Colors.grey[400] : Colors.white,
+                      ),
+                    ),
+                  ),
+                  _buildIncrementButton(
+                    icon: Icons.add,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.weight + 2.5).clamp(0.0, 500.0);
+                      provider.updateSetMetrics(set, newVal, set.reps);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
 
-          // Reps Controller
+          // Reps/Duration Column (Column 3)
           Expanded(
             flex: 3,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildIncrementButton(
-                  icon: Icons.remove,
-                  onPressed: isCompleted ? null : () {
-                    final newVal = (set.reps - 1).clamp(0, 100);
-                    provider.updateSetMetrics(set, set.weight, newVal);
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    "${set.reps}",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: isCompleted ? Colors.grey[400] : Colors.white,
+                if (exercise.type == ExerciseType.reps) ...[
+                  // Reps controller
+                  _buildIncrementButton(
+                    icon: Icons.remove,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.reps - 1).clamp(0, 100);
+                      provider.updateSetMetrics(set, set.weight, newVal);
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      "${set.reps}",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isCompleted ? Colors.grey[400] : Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                _buildIncrementButton(
-                  icon: Icons.add,
-                  onPressed: isCompleted ? null : () {
-                    final newVal = (set.reps + 1).clamp(0, 100);
-                    provider.updateSetMetrics(set, set.weight, newVal);
-                  },
-                ),
+                  _buildIncrementButton(
+                    icon: Icons.add,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.reps + 1).clamp(0, 100);
+                      provider.updateSetMetrics(set, set.weight, newVal);
+                    },
+                  ),
+                ] else ...[
+                  // Duration controller (for time & distance)
+                  _buildIncrementButton(
+                    icon: Icons.remove,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.duration - 5).clamp(0, 3600);
+                      provider.updateSetMetrics(set, set.weight, set.reps, duration: newVal);
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      formatDuration(set.duration),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isCompleted ? Colors.grey[400] : Colors.white,
+                      ),
+                    ),
+                  ),
+                  _buildIncrementButton(
+                    icon: Icons.add,
+                    onPressed: isCompleted ? null : () {
+                      final newVal = (set.duration + 5).clamp(0, 3600);
+                      provider.updateSetMetrics(set, set.weight, set.reps, duration: newVal);
+                    },
+                  ),
+                ],
               ],
             ),
           ),

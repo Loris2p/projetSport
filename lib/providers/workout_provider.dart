@@ -7,6 +7,7 @@ import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
+import '../models/program_exercise.dart';
 import '../repositories/workout_repository.dart';
 import '../services/health_sync_service.dart';
 
@@ -101,13 +102,14 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Exercises ---
-  Future<void> createCustomExercise(String name, String category, {String? notes}) async {
+  Future<void> createCustomExercise(String name, String category, {String? notes, ExerciseType type = ExerciseType.reps}) async {
     final newExercise = Exercise(
       id: 'custom_${_uuid.v4()}',
       name: name,
       category: category,
       notes: notes,
       isCustom: true,
+      type: type,
     );
     await repository.saveExercise(newExercise);
     _exercises = repository.getExercises();
@@ -133,7 +135,7 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Programs ---
-  Future<void> createProgram(String name, String description, List<Exercise> exercises, [Map<String, String>? exerciseGroups]) async {
+  Future<void> createProgram(String name, String description, List<ProgramExercise> exercises, [Map<String, String>? exerciseGroups]) async {
     final newProgram = WorkoutProgram(
       id: 'program_${_uuid.v4()}',
       name: name,
@@ -177,16 +179,19 @@ class WorkoutProvider with ChangeNotifier {
 
     if (program != null) {
       for (var exercise in program.exercises) {
-        final String? exerciseGroupId = program.exerciseGroups?[exercise.id];
+        final String? exerciseGroupId = program.exerciseGroups?[exercise.exerciseId];
         exercises.add(
           PerformedExercise(
-            exerciseId: exercise.id,
+            exerciseId: exercise.exerciseId,
             groupId: exerciseGroupId,
-            sets: [
-              ExerciseSet(id: _uuid.v4(), type: SetType.normal),
-              ExerciseSet(id: _uuid.v4(), type: SetType.normal),
-              ExerciseSet(id: _uuid.v4(), type: SetType.normal),
-            ],
+            sets: List.generate(
+              exercise.setsCount,
+              (_) => ExerciseSet(
+                id: _uuid.v4(),
+                type: SetType.normal,
+                reps: exercise.repsCount,
+              ),
+            ),
           ),
         );
       }
@@ -294,9 +299,12 @@ class WorkoutProvider with ChangeNotifier {
     }
   }
 
-  void updateSetMetrics(ExerciseSet set, double weight, int reps, {SetType? type}) {
+  void updateSetMetrics(ExerciseSet set, double weight, int reps, {SetType? type, int? duration, double? distance}) {
     set.weight = weight;
     set.reps = reps;
+    if (duration != null) set.duration = duration;
+    if (distance != null) set.distance = distance;
+    if (type != null) set.type = type;
     // If it was completed, recheck PRs
     if (set.isCompleted && _activeSession != null) {
       // Find the exercise ID
@@ -332,8 +340,20 @@ class WorkoutProvider with ChangeNotifier {
     if (set.isCompleted) {
       // Run PR detection
       checkPRsForSet(perfEx.exerciseId, set);
-      // Start rest timer
-      startRestTimer();
+      // Start rest timer using exercise custom rest duration if available
+      int? restTime;
+      if (_activeSession?.programId != null) {
+        try {
+          final program = _programs.firstWhere((p) => p.id == _activeSession!.programId);
+          for (var pe in program.exercises) {
+            if (pe.exerciseId == perfEx.exerciseId) {
+              restTime = pe.restTime;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+      startRestTimer(restTime);
     } else {
       set.isWeightPR = false;
       set.is1RMPR = false;

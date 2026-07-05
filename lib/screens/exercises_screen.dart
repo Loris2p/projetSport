@@ -120,8 +120,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
-                                    "Par défaut",
-                                    style: TextStyle(fontSize: 9, color: Colors.grey),
+                                    "Public",
+                                    style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold),
                                   ),
                                 )
                               else
@@ -132,8 +132,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
-                                    "Perso",
-                                    style: TextStyle(fontSize: 9, color: Color(0xff2563eb)),
+                                    "Privé",
+                                    style: TextStyle(fontSize: 9, color: Color(0xff2563eb), fontWeight: FontWeight.bold),
                                   ),
                                 ),
                             ],
@@ -189,6 +189,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     String name = ex?.name ?? '';
     String category = ex?.category ?? 'Pectoraux';
     String notes = ex?.notes ?? '';
+    ExerciseType type = ex?.type ?? ExerciseType.reps;
 
     // Standard category presets for easier input
     final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'];
@@ -231,6 +232,24 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  DropdownButtonFormField<ExerciseType>(
+                    initialValue: type,
+                    decoration: const InputDecoration(
+                      labelText: "Type d'évaluation",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: ExerciseType.reps, child: Text("Répétitions & Poids")),
+                      DropdownMenuItem(value: ExerciseType.time, child: Text("Temps / Durée")),
+                      DropdownMenuItem(value: ExerciseType.distance, child: Text("Distance & Temps")),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        type = val;
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     initialValue: notes,
                     decoration: const InputDecoration(
@@ -255,7 +274,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                 if (formKey.currentState!.validate()) {
                   formKey.currentState!.save();
                   if (ex == null) {
-                    provider.createCustomExercise(name, category, notes: notes);
+                    provider.createCustomExercise(name, category, notes: notes, type: type);
                   } else {
                     final updated = Exercise(
                       id: ex.id,
@@ -263,6 +282,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       category: category,
                       notes: notes,
                       isCustom: true,
+                      type: type,
                     );
                     provider.updateExercise(updated);
                   }

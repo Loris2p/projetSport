@@ -10,6 +10,7 @@ import 'repositories/auth_repository.dart';
 import 'services/health_sync_service.dart';
 import 'screens/main_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/admin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +58,11 @@ class SportApp extends StatelessWidget {
       title: 'SportApp',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: authProvider.isAuthenticated ? const MainShell() : const LoginScreen(),
+      home: authProvider.isAuthenticated
+          ? (authProvider.currentUser?.isAdmin == true
+              ? const AdminScreen()
+              : const MainShell())
+          : const LoginScreen(),
     );
   }
 }

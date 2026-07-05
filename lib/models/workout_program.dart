@@ -1,10 +1,10 @@
-import 'exercise.dart';
+import 'program_exercise.dart';
 
 class WorkoutProgram {
   final String id;
   final String name;
   final String description;
-  final List<Exercise> exercises;
+  final List<ProgramExercise> exercises;
   final Map<String, String>? exerciseGroups;
 
   WorkoutProgram({
@@ -31,7 +31,7 @@ class WorkoutProgram {
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       exercises: (json['exercises'] as List<dynamic>)
-          .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
+          .map((e) => ProgramExercise.fromJson(e as Map<String, dynamic>))
           .toList(),
       exerciseGroups: json['exerciseGroups'] != null
           ? Map<String, String>.from(json['exerciseGroups'] as Map)

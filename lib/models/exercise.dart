@@ -1,9 +1,12 @@
+enum ExerciseType { reps, time, distance }
+
 class Exercise {
   final String id;
   final String name;
   final String category; // ex: Pectoraux, Dos, Jambes, Cardio
   final String? notes; 
   final bool isCustom; 
+  final ExerciseType type;
 
   Exercise({
     required this.id,
@@ -11,6 +14,7 @@ class Exercise {
     required this.category,
     this.notes,
     this.isCustom = false,
+    this.type = ExerciseType.reps,
   });
 
   Map<String, dynamic> toJson() {
@@ -20,6 +24,7 @@ class Exercise {
       'category': category,
       'notes': notes,
       'isCustom': isCustom,
+      'type': type.name,
     };
   }
 
@@ -30,6 +35,10 @@ class Exercise {
       category: json['category'] as String,
       notes: json['notes'] as String?,
       isCustom: json['isCustom'] as bool? ?? false,
+      type: ExerciseType.values.firstWhere(
+        (e) => e.name == json['type'],
+        orElse: () => ExerciseType.reps,
+      ),
     );
   }
 }

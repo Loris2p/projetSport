@@ -24,7 +24,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadUsers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUsers();
+    });
   }
 
   @override
@@ -50,6 +52,24 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: const Text("Administration"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Color(0xffef4444)),
+            tooltip: "Déconnexion",
+            onPressed: () async {
+              final authProvider = context.read<AuthProvider>();
+              final workoutProvider = context.read<WorkoutProvider>();
+              final navigator = Navigator.of(context);
+
+              await authProvider.signOut();
+              await workoutProvider.loadUser(null);
+
+              if (navigator.canPop()) {
+                navigator.pop();
+              }
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: const Color(0xff2563eb),
@@ -401,7 +421,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                ex.isCustom ? "Perso" : "Défaut",
+                                ex.isCustom ? "Privé" : "Public",
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: ex.isCustom ? const Color(0xff2563eb) : Colors.grey,
@@ -460,7 +480,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                 ),
               ),
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text("Créer un exercice d'administration", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text("Créer un exercice", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               onPressed: () => _showExerciseDialog(null, workoutProvider),
             ),
           ),
@@ -475,8 +495,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     String category = ex?.category ?? 'Pectoraux';
     String notes = ex?.notes ?? '';
     bool isCustom = ex?.isCustom ?? false;
+    ExerciseType type = ex?.type ?? ExerciseType.reps;
 
-    final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'];
+    final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio','Autre'];
     if (ex != null && !categories.contains(ex.category)) {
       categories.add(ex.category);
     }
@@ -518,6 +539,26 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         },
                       ),
                       const SizedBox(height: 16),
+                      DropdownButtonFormField<ExerciseType>(
+                        initialValue: type,
+                        decoration: const InputDecoration(
+                          labelText: "Type d'évaluation",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: ExerciseType.reps, child: Text("Répétitions & Poids")),
+                          DropdownMenuItem(value: ExerciseType.time, child: Text("Temps / Durée")),
+                          DropdownMenuItem(value: ExerciseType.distance, child: Text("Distance & Temps")),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              type = val;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
                         initialValue: notes,
                         decoration: const InputDecoration(
@@ -529,8 +570,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 16),
                       SwitchListTile(
-                        title: const Text("Exercice personnalisé"),
-                        subtitle: const Text("Si désactivé, l'exercice sera 'Par défaut'"),
+                        title: const Text("Exercice privé (personnalisé)"),
+                        subtitle: const Text("Si désactivé, l'exercice sera 'Public' (visible par tous)"),
                         value: isCustom,
                         activeThumbColor: const Color(0xff2563eb),
                         onChanged: (val) {
@@ -560,6 +601,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           category: category,
                           notes: notes,
                           isCustom: isCustom,
+                          type: type,
                         );
                         provider.updateExercise(newEx);
                       } else {
@@ -569,6 +611,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           category: category,
                           notes: notes,
                           isCustom: isCustom,
+                          type: type,
                         );
                         provider.updateExercise(updated);
                       }

@@ -2,10 +2,12 @@ enum SetType { normal, warmup, dropSet, failure }
 
 class ExerciseSet {
   final String id;
-  double weight; // Poids en kg
+  double weight; // Poids en kg (ou niveau de résistance)
   int reps; // Répétitions effectuées
   bool isCompleted; // Validée par la case à cocher
   SetType type;
+  int duration; // Durée en secondes
+  double distance; // Distance en kilomètres
   
   // Attributs calculés localement pour les records
   bool isWeightPR;
@@ -19,6 +21,8 @@ class ExerciseSet {
     this.type = SetType.normal,
     this.isWeightPR = false,
     this.is1RMPR = false,
+    this.duration = 0,
+    this.distance = 0.0,
   });
 
   // Calcul du One Rep Max estimé (Formule d'Epley)
@@ -36,6 +40,8 @@ class ExerciseSet {
       'type': type.name,
       'isWeightPR': isWeightPR,
       'is1RMPR': is1RMPR,
+      'duration': duration,
+      'distance': distance,
     };
   }
 
@@ -51,6 +57,8 @@ class ExerciseSet {
       ),
       isWeightPR: json['isWeightPR'] as bool? ?? false,
       is1RMPR: json['is1RMPR'] as bool? ?? false,
+      duration: json['duration'] as int? ?? 0,
+      distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
