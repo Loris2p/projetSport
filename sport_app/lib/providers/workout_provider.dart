@@ -80,6 +80,26 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadUser(String? userId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    await repository.setUserId(userId);
+    _exercises = repository.getExercises();
+    _programs = repository.getPrograms();
+    _history = repository.getHistory();
+
+    // Vider les caches mémoire lors du changement d'utilisateur
+    _sessionVolumeCache.clear();
+    _sessionPRsCache.clear();
+    _sessionExercisesSummaryCache.clear();
+
+    _updateWeeklyStatsAndFlatHistory();
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
   // --- Exercises ---
   Future<void> createCustomExercise(String name, String category, {String? notes}) async {
     final newExercise = Exercise(

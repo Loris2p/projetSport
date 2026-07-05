@@ -90,4 +90,61 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<List<UserProfile>> getAllUsers() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final list = await authRepository.getAllUsers();
+      _isLoading = false;
+      notifyListeners();
+      return list;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+      _isLoading = false;
+      notifyListeners();
+      return [];
+    }
+  }
+
+  Future<bool> deleteUser(String uid) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await authRepository.deleteUser(uid);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateUser(UserProfile user) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await authRepository.updateUser(user);
+      if (_currentUser?.uid == user.uid) {
+        _currentUser = user;
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

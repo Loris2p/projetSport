@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/workout_provider.dart';
 import '../providers/auth_provider.dart';
 import 'active_session_screen.dart';
+import 'admin_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -63,9 +64,17 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   PopupMenuButton<String>(
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       if (value == 'logout') {
-                        authProvider.signOut();
+                        await authProvider.signOut();
+                        if (buildContext.mounted) {
+                          await buildContext.read<WorkoutProvider>().loadUser(null);
+                        }
+                      } else if (value == 'admin') {
+                        Navigator.push(
+                          buildContext,
+                          MaterialPageRoute(builder: (_) => const AdminScreen()),
+                        );
                       }
                     },
                     offset: const Offset(0, 50),
@@ -73,6 +82,17 @@ class DashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     itemBuilder: (BuildContext context) => [
+                      if (authProvider.currentUser?.isAdmin == true)
+                        const PopupMenuItem<String>(
+                          value: 'admin',
+                          child: Row(
+                            children: [
+                              Icon(Icons.admin_panel_settings, color: Color(0xff7c3aed), size: 20),
+                              SizedBox(width: 8),
+                              Text("Administration"),
+                            ],
+                          ),
+                        ),
                       const PopupMenuItem<String>(
                         value: 'logout',
                         child: Row(

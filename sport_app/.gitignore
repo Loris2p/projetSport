@@ -49,6 +49,11 @@ app.*.map.json
 /programs/
 /exercises/
 /sessions/
+/users/
+
+# Secrets & Environment variables
+.env
+
 
 .git*
 .env*

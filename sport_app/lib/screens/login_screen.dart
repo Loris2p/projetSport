@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/workout_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -81,7 +82,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final userId = authProvider.currentUser?.uid;
+      final workoutProvider = context.read<WorkoutProvider>();
+      final messenger = ScaffoldMessenger.of(context);
+      
+      await workoutProvider.loadUser(userId);
+
+      messenger.showSnackBar(
         SnackBar(
           content: Text(_isLoginMode ? "Bienvenue !" : "Compte créé avec succès !"),
           backgroundColor: const Color(0xff10b981),

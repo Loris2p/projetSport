@@ -4,6 +4,7 @@ import '../models/workout_session.dart';
 
 abstract class WorkoutRepository {
   Future<void> init();
+  Future<void> setUserId(String? userId);
   List<Exercise> getExercises();
   Future<void> saveExercise(Exercise exercise);
   Future<void> deleteExercise(String id);
