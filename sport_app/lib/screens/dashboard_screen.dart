@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/workout_provider.dart';
+import '../providers/auth_provider.dart';
 import 'active_session_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -10,6 +11,7 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext buildContext) {
     final workoutProvider = Provider.of<WorkoutProvider>(buildContext);
+    final authProvider = Provider.of<AuthProvider>(buildContext);
 
     // Format current date
     final String formattedDate = DateFormat('EEEE d MMMM', 'fr_FR').format(DateTime.now());
@@ -25,6 +27,8 @@ class DashboardScreen extends StatelessWidget {
     // Get latest program for quick resume shortcut
     final programs = workoutProvider.programs;
     final quickProgram = programs.isNotEmpty ? programs.first : null;
+
+    final userName = authProvider.currentUser?.displayName ?? '';
 
     return Scaffold(
       body: SafeArea(
@@ -49,19 +53,42 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        "Bonjour !",
-                        style: TextStyle(
-                          fontSize: 28,
+                      Text(
+                        userName.isNotEmpty ? "Bonjour, $userName !" : "Bonjour !",
+                        style: const TextStyle(
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const CircleAvatar(
-                    backgroundColor: Color(0xff2563eb),
-                    radius: 22,
-                    child: Icon(Icons.person, color: Colors.white),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        authProvider.signOut();
+                      }
+                    },
+                    offset: const Offset(0, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, color: Color(0xffef4444), size: 20),
+                            SizedBox(width: 8),
+                            Text("Déconnexion", style: TextStyle(color: Color(0xffef4444))),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: const CircleAvatar(
+                      backgroundColor: Color(0xff2563eb),
+                      radius: 22,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
                   ),
                 ],
               ),

@@ -39,6 +39,7 @@ dependencies:
   uuid: ^4.5.3
   path_provider: ^2.1.6
   health: ^13.3.1
+  localstore: ^1.4.0
 
 dev_dependencies:
   flutter_test:
