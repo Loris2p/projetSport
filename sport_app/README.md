@@ -10,6 +10,71 @@ Une application Flutter moderne pour suivre vos entraînements de musculation, p
 
 ---
 
+## 🗄️ Structure de la Base de Données (NoSQL)
+
+L'application utilise **Localstore**, une base de données NoSQL locale basée sur des documents JSON. Les données sont cloisonnées par utilisateur sous des collections suffixées par leur ID utilisateur (ex: `exercises_userId`).
+
+### Schéma de données (Modèle NoSQL)
+
+```mermaid
+erDiagram
+    COLLECTION_EXERCISES {
+        string id PK
+        string name
+        string category
+        string notes
+        bool isCustom
+    }
+
+    COLLECTION_PROGRAMS {
+        string id PK
+        string name
+        string description
+        list exercises "Liste d'objets Exercise"
+        map exerciseGroups
+    }
+
+    COLLECTION_SESSIONS {
+        string id PK
+        string programId FK "Optionnel"
+        string name
+        string startTime
+        string endTime
+        list exercises "Liste d'objets PerformedExercise"
+        double activeCaloriesBurned
+        double averageHeartRate
+    }
+
+    PERFORMED_EXERCISE {
+        string exerciseId FK
+        list sets "Liste d'objets ExerciseSet"
+        string notes
+        string groupId
+    }
+
+    EXERCISE_SET {
+        string id
+        double weight
+        int reps
+        bool isCompleted
+        string type "normal / warmup / dropSet / failure"
+        bool isWeightPR
+        bool is1RMPR
+    }
+
+    COLLECTION_SESSIONS ||--o{ PERFORMED_EXERCISE : "contient"
+    PERFORMED_EXERCISE ||--o{ EXERCISE_SET : "contient"
+```
+
+### Description des collections
+
+1. **`exercises` / `exercises_userId`** : Contient tous les exercices de musculation disponibles.
+2. **`programs` / `programs_userId`** : Contient les routines/programmes d'entraînement personnalisés. Les exercices sont dupliqués et intégrés directement dans le document.
+3. **`sessions` / `sessions_userId`** : Contient l'historique complet des séances réalisées. Chaque séance stocke ses exercices effectués, ses séries (`ExerciseSet`) de manière dénormalisée, ainsi que les données énergétiques et cardiaques issues de la synchronisation de santé.
+
+---
+
+
 ## ⚠️ Statut de la Synchronisation Santé (En Standby)
 
 La fonctionnalité de synchronisation réelle avec les services de santé (Google Fit / Apple Health) a été mise **en standby** pour simplifier le développement et les tests locaux (évite les fenêtres d'autorisation système intempestives et les configurations complexes).
