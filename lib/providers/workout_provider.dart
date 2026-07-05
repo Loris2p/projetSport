@@ -190,6 +190,8 @@ class WorkoutProvider with ChangeNotifier {
                 id: _uuid.v4(),
                 type: SetType.normal,
                 reps: exercise.repsCount,
+                duration: exercise.durationTarget,
+                distance: exercise.distanceTarget,
               ),
             ),
           ),
