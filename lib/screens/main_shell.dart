@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/workout_provider.dart';
+import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'programs_screen.dart';
 import 'history_screen.dart';
@@ -26,26 +27,81 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
     final provider = Provider.of<WorkoutProvider>(context);
     final activeSession = provider.activeSession;
+    final isAdmin = authProvider.currentUser?.isAdmin == true;
 
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          // Screen contents
-          IndexedStack(
-            index: _currentIndex,
-            children: _screens,
-          ),
-          
-          // Persistent floating Active Workout Bar
-          if (activeSession != null)
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 8,
-              child: _buildActiveWorkoutBar(context, provider),
+          if (isAdmin)
+            SafeArea(
+              bottom: false,
+              child: Container(
+                color: const Color(0xff1e1b4b), // Dark violet/indigo
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.admin_panel_settings, color: Color(0xffa78bfa), size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          "Mode Entraînement (Admin)",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Text(
+                          "Retour Gestion",
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        const SizedBox(width: 4),
+                        Switch(
+                          value: true,
+                          activeThumbColor: const Color(0xffa78bfa),
+                          activeTrackColor: const Color(0xff4c1d95),
+                          onChanged: (val) {
+                            if (!val) {
+                              authProvider.setAdminTrainingMode(false);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
+          Expanded(
+            child: Stack(
+              children: [
+                // Screen contents
+                IndexedStack(
+                  index: _currentIndex,
+                  children: _screens,
+                ),
+                
+                // Persistent floating Active Workout Bar
+                if (activeSession != null)
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 8,
+                    child: _buildActiveWorkoutBar(context, provider),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: Container(
