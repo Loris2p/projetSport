@@ -7,6 +7,7 @@ class AuthProvider with ChangeNotifier {
   UserProfile? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isAdminTrainingMode = false;
 
   AuthProvider({required this.authRepository});
 
@@ -15,6 +16,12 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get isAdminTrainingMode => _isAdminTrainingMode;
+
+  void setAdminTrainingMode(bool value) {
+    _isAdminTrainingMode = value;
+    notifyListeners();
+  }
 
   Future<void> init() async {
     _isLoading = true;

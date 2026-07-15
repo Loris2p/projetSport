@@ -39,9 +39,13 @@ dependencies:
   uuid: ^4.5.3
   path_provider: ^2.1.6
   health: ^13.3.1
-  localstore: ^1.4.0
   flutter_dotenv: ^6.0.1
   crypto: ^3.0.7
+  firebase_core: ^4.11.0
+  firebase_auth: ^6.5.4
+  cloud_firestore: ^6.6.0
+  firedart: ^0.9.8
+  shared_preferences: ^2.5.4
 
 dev_dependencies:
   flutter_test:

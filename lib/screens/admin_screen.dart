@@ -49,15 +49,32 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Administration"),
         actions: [
+          Row(
+            children: [
+              const Text(
+                "Mode Entraînement",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 4),
+              Switch(
+                value: authProvider.isAdminTrainingMode,
+                activeThumbColor: const Color(0xff2563eb),
+                onChanged: (val) {
+                  authProvider.setAdminTrainingMode(val);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.logout, color: Color(0xffef4444)),
             tooltip: "Déconnexion",
             onPressed: () async {
-              final authProvider = context.read<AuthProvider>();
               final workoutProvider = context.read<WorkoutProvider>();
               final navigator = Navigator.of(context);
 

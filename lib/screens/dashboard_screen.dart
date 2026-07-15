@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../providers/workout_provider.dart';
 import '../providers/auth_provider.dart';
 import 'active_session_screen.dart';
-import 'admin_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -71,10 +70,7 @@ class DashboardScreen extends StatelessWidget {
                           await buildContext.read<WorkoutProvider>().loadUser(null);
                         }
                       } else if (value == 'admin') {
-                        Navigator.push(
-                          buildContext,
-                          MaterialPageRoute(builder: (_) => const AdminScreen()),
-                        );
+                        authProvider.setAdminTrainingMode(false);
                       }
                     },
                     offset: const Offset(0, 50),
