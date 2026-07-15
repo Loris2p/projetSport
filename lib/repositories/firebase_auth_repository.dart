@@ -32,12 +32,11 @@ class FirebaseAuthRepository implements AuthRepository {
         // Créer ou récupérer les infos de base
         try {
           final user = await fd.FirebaseAuth.instance.getUser();
-          final isDefaultAdmin = user.email?.toLowerCase() == 'admin@admin.com';
           final profile = UserProfile(
             uid: uid,
             email: user.email ?? '',
-            displayName: (isDefaultAdmin ? 'Administrateur' : 'Utilisateur'),
-            isAdmin: isDefaultAdmin,
+            displayName: 'Utilisateur',
+            isAdmin: false,
           );
           await updateUser(profile);
           return profile;
@@ -53,12 +52,11 @@ class FirebaseAuthRepository implements AuthRepository {
         return UserProfile.fromJson(doc.data()!);
       }
 
-      final isDefaultAdmin = fbUser.email?.toLowerCase() == 'admin@admin.com';
       final profile = UserProfile(
         uid: fbUser.uid,
         email: fbUser.email ?? '',
-        displayName: fbUser.displayName ?? (isDefaultAdmin ? 'Administrateur' : 'Utilisateur'),
-        isAdmin: isDefaultAdmin,
+        displayName: fbUser.displayName ?? 'Utilisateur',
+        isAdmin: false,
       );
       await updateUser(profile);
       return profile;
@@ -82,12 +80,11 @@ class FirebaseAuthRepository implements AuthRepository {
           }
         } catch (_) {}
 
-        final isDefaultAdmin = email.trim().toLowerCase() == 'admin@admin.com';
         final profile = UserProfile(
           uid: uid,
           email: email.trim().toLowerCase(),
-          displayName: isDefaultAdmin ? 'Administrateur' : 'Utilisateur',
-          isAdmin: isDefaultAdmin,
+          displayName: 'Utilisateur',
+          isAdmin: false,
         );
         await updateUser(profile);
         return profile;
@@ -118,12 +115,11 @@ class FirebaseAuthRepository implements AuthRepository {
           return UserProfile.fromJson(doc.data()!);
         }
 
-        final isDefaultAdmin = email.trim().toLowerCase() == 'admin@admin.com';
         final profile = UserProfile(
           uid: fbUser.uid,
           email: fbUser.email ?? email,
-          displayName: fbUser.displayName ?? (isDefaultAdmin ? 'Administrateur' : 'Utilisateur'),
-          isAdmin: isDefaultAdmin,
+          displayName: fbUser.displayName ?? 'Utilisateur',
+          isAdmin: false,
         );
         await updateUser(profile);
         return profile;
