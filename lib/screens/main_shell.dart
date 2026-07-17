@@ -7,6 +7,7 @@ import 'programs_screen.dart';
 import 'history_screen.dart';
 import 'active_session_screen.dart';
 import 'exercises_screen.dart';
+import 'statistics_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -22,6 +23,7 @@ class _MainShellState extends State<MainShell> {
     DashboardScreen(),
     ProgramsScreen(),
     HistoryScreen(),
+    StatisticsScreen(),
     ExercisesScreen(),
   ];
 
@@ -130,6 +132,11 @@ class _MainShellState extends State<MainShell> {
               icon: Icon(Icons.history_outlined),
               activeIcon: Icon(Icons.history),
               label: "Historique",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.show_chart_outlined),
+              activeIcon: Icon(Icons.show_chart),
+              label: "Stats",
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.fitness_center_outlined),

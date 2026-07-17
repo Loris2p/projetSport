@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xff8b5cf6).withOpacity(0.4),
+                              color: const Color(0xff8b5cf6).withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 2,
                             )
@@ -191,10 +191,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       child: Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.04),
+                          color: Colors.white.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.08),
+                            color: Colors.white.withValues(alpha: 0.08),
                             width: 1.5,
                           ),
                         ),
@@ -216,10 +216,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xffef4444).withOpacity(0.1),
+                                  color: const Color(0xffef4444).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: const Color(0xffef4444).withOpacity(0.3),
+                                    color: const Color(0xffef4444).withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Row(
@@ -320,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xff2563eb).withOpacity(0.3),
+                                    color: const Color(0xff2563eb).withValues(alpha: 0.3),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   )
@@ -394,7 +394,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       prefixIcon: Icon(prefixIcon, color: Colors.white60, size: 20),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.white.withOpacity(0.04),
+      fillColor: Colors.white.withValues(alpha: 0.04),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       errorStyle: const TextStyle(color: Color(0xfff87171)),
       focusedErrorBorder: OutlineInputBorder(
@@ -403,11 +403,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: const Color(0xfff87171).withOpacity(0.5), width: 1),
+        borderSide: BorderSide(color: const Color(0xfff87171).withValues(alpha: 0.5), width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

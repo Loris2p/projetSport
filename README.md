@@ -12,7 +12,7 @@ Une application Flutter moderne pour suivre vos entraînements de musculation, p
 
 ## 🗄️ Structure de la Base de Données (NoSQL)
 
-L'application utilise **Localstore**, une base de données NoSQL locale basée sur des documents JSON. Les données sont cloisonnées par utilisateur sous des collections suffixées par leur ID utilisateur (ex: `exercises_userId`).
+L'application utilise **Firebase Firestore**, une base de données NoSQL hébergée dans le cloud et synchronisée. Les données sont cloisonnées par utilisateur au sein de collections de documents. Pour les plateformes Desktop (Windows/Linux), l'intégration se fait via le package `firedart`, tandis que les versions Mobile (Android/iOS) et Web utilisent le SDK officiel Firebase.
 
 ### Schéma de données (Modèle NoSQL)
 
@@ -24,14 +24,19 @@ erDiagram
         string category
         string notes
         bool isCustom
+        string ownerId "ID utilisateur pour exercices privés, null pour exercices publics"
+        string type "reps / time / distance"
     }
+
+    COLLECTION_USERS ||--o{ COLLECTION_PROGRAMS : "contient (sous-collection)"
+    COLLECTION_USERS ||--o{ COLLECTION_SESSIONS : "contient (sous-collection)"
 
     COLLECTION_PROGRAMS {
         string id PK
         string name
         string description
-        list exercises "Liste d'objets Exercise"
-        map exerciseGroups
+        list exercises "Liste de ProgramExercise"
+        map exerciseGroups "Clé: exerciseId, Valeur: groupId"
     }
 
     COLLECTION_SESSIONS {
@@ -40,14 +45,14 @@ erDiagram
         string name
         string startTime
         string endTime
-        list exercises "Liste d'objets PerformedExercise"
+        list exercises "Liste de PerformedExercise"
         double activeCaloriesBurned
         double averageHeartRate
     }
 
     PERFORMED_EXERCISE {
         string exerciseId FK
-        list sets "Liste d'objets ExerciseSet"
+        list sets "Liste de ExerciseSet"
         string notes
         string groupId
     }
@@ -60,6 +65,8 @@ erDiagram
         string type "normal / warmup / dropSet / failure"
         bool isWeightPR
         bool is1RMPR
+        int duration
+        double distance
     }
 
     COLLECTION_SESSIONS ||--o{ PERFORMED_EXERCISE : "contient"
@@ -68,9 +75,9 @@ erDiagram
 
 ### Description des collections
 
-1. **`exercises` / `exercises_userId`** : Contient tous les exercices de musculation disponibles.
-2. **`programs` / `programs_userId`** : Contient les routines/programmes d'entraînement personnalisés. Les exercices sont dupliqués et intégrés directement dans le document.
-3. **`sessions` / `sessions_userId`** : Contient l'historique complet des séances réalisées. Chaque séance stocke ses exercices effectués, ses séries (`ExerciseSet`) de manière dénormalisée, ainsi que les données énergétiques et cardiaques issues de la synchronisation de santé.
+1. **`exercises` (Collection Racine)** : Contient tous les exercices disponibles. Les exercices publics (communs à tous) possèdent `isCustom: false`. Les exercices privés ont `isCustom: true` et sont filtrés par le champ `ownerId == userId`.
+2. **`users/{userId}/programs` (Sous-collection)** : Contient les routines/programmes d'entraînement personnalisés de l'utilisateur.
+3. **`users/{userId}/sessions` (Sous-collection)** : Contient l'historique complet des séances réalisées par l'utilisateur. Chaque séance stocke ses exercices effectués, ses séries (`ExerciseSet`) de manière dénormalisée, ainsi que les données énergétiques et cardiaques issues de la synchronisation de santé.
 
 ---
 
