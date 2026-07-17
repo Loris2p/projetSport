@@ -258,16 +258,6 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     final workoutProvider = Provider.of<WorkoutProvider>(context);
     final allExercises = workoutProvider.exercises;
 
-    // Filter exercises based on search query and category
-    final filteredExercises = allExercises.where((ex) {
-      final matchesSearch = ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == 'Tous' || ex.category == _selectedCategory;
-      return matchesSearch && matchesCategory;
-    }).toList();
-
-    // Get unique categories for filtering
-    final categories = ['Tous', ...allExercises.map((e) => e.category).toSet()];
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.program == null ? "Nouveau Programme" : "Modifier le Programme"),
@@ -665,104 +655,18 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                           }).toList(),
                         ),
                   const SizedBox(height: 24),
-
-                  // Exercise Catalog Picker Title
-                  const Text(
-                    "Sélectionner des exercices",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddExerciseBottomSheet(context, allExercises),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff2563eb),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: const Text("Ajouter un exercice"),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Search & Filters inside Picker
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: "Rechercher...",
-                            prefixIcon: const Icon(Icons.search, size: 20),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                            fillColor: const Color(0xff1e1e24),
-                            filled: true,
-                          ),
-                          onChanged: (val) {
-                            setState(() {
-                              _searchQuery = val;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<String>(
-                        value: _selectedCategory,
-                        dropdownColor: const Color(0xff1e1e24),
-                        underline: const SizedBox(),
-                        icon: const Icon(Icons.filter_list),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedCategory = newValue;
-                            });
-                          }
-                        },
-                        items: categories.map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value, style: const TextStyle(fontSize: 14)),
-                          );
-                        }).toList(),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 32),
                 ]),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final ex = filteredExercises[index];
-                    final isAlreadySelected = _selectedExercises.any((e) => e.exerciseId == ex.id);
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: ListTile(
-                        title: Text(ex.name),
-                        subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        trailing: isAlreadySelected
-                            ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
-                            : const Icon(Icons.add_circle_outline, color: Colors.grey),
-                        onTap: () {
-                          setState(() {
-                            if (isAlreadySelected) {
-                              _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
-                            } else {
-                              _selectedExercises.add(
-                                ProgramExercise(
-                                  exerciseId: ex.id,
-                                  type: ExerciseType.reps,
-                                  setsCount: 3,
-                                  repsCount: 10,
-                                  restTime: 90,
-                                  durationTarget: 0,
-                                  distanceTarget: 0.0,
-                                ),
-                              );
-                            }
-                          });
-                        },
-                      ),
-                    );
-                  },
-                  childCount: filteredExercises.length,
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 32),
             ),
           ],
         ),
@@ -903,6 +807,160 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showAddExerciseBottomSheet(BuildContext context, List<Exercise> allExercises) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff121216),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final filtered = allExercises.where((ex) {
+              final matchesSearch = ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
+              final matchesCategory = _selectedCategory == 'Tous' || ex.category == _selectedCategory;
+              return matchesSearch && matchesCategory;
+            }).toList();
+
+            final categories = ['Tous', ...allExercises.map((e) => e.category).toSet()];
+
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.8,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[600],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Sélectionner des exercices",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: "Rechercher...",
+                                hintStyle: const TextStyle(color: Colors.grey),
+                                prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                fillColor: const Color(0xff1e1e24),
+                                filled: true,
+                              ),
+                              onChanged: (val) {
+                                setModalState(() {
+                                  _searchQuery = val;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: _selectedCategory,
+                            dropdownColor: const Color(0xff1e1e24),
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.filter_list, color: Colors.white),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setModalState(() {
+                                  _selectedCategory = newValue;
+                                });
+                              }
+                            },
+                            items: categories.map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.white)),
+                              );
+                            }).toList(),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final ex = filtered[index];
+                            final isAlreadySelected = _selectedExercises.any((e) => e.exerciseId == ex.id);
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 4.0),
+                              color: const Color(0xff1e1e24),
+                              child: ListTile(
+                                title: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                subtitle: Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                trailing: isAlreadySelected
+                                    ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
+                                    : const Icon(Icons.add_circle_outline, color: Colors.grey),
+                                onTap: () {
+                                  setState(() {
+                                    if (isAlreadySelected) {
+                                      _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
+                                    } else {
+                                      _selectedExercises.add(
+                                        ProgramExercise(
+                                          exerciseId: ex.id,
+                                          type: ExerciseType.reps,
+                                          setsCount: 3,
+                                          repsCount: 10,
+                                          restTime: 90,
+                                          durationTarget: 0,
+                                          distanceTarget: 0.0,
+                                        ),
+                                      );
+                                    }
+                                  });
+                                  setModalState(() {});
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff2563eb),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text("Fermer", style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
