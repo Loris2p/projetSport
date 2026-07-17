@@ -112,14 +112,14 @@ class ProgramsScreen extends StatelessWidget {
             );
 
             String targetsString = '';
-            if (ex.type == ExerciseType.reps) {
+            if (progEx.type == ExerciseType.reps) {
               targetsString = "${progEx.setsCount}x${progEx.repsCount}";
-            } else if (ex.type == ExerciseType.time) {
+            } else if (progEx.type == ExerciseType.time) {
               final m = progEx.durationTarget ~/ 60;
               final s = progEx.durationTarget % 60;
               final durationString = m > 0 ? "$m:${s.toString().padLeft(2, '0')}" : "${s}s";
               targetsString = "${progEx.setsCount}x$durationString";
-            } else if (ex.type == ExerciseType.distance) {
+            } else if (progEx.type == ExerciseType.distance) {
               targetsString = "${progEx.setsCount}x${progEx.distanceTarget} km";
             }
 
@@ -344,6 +344,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                       : ReorderableListView(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
+                          // ignore: deprecated_member_use
                           onReorder: _onReorderExercises,
                           children: _selectedExercises.asMap().entries.map((entry) {
                             final idx = entry.key;
@@ -452,7 +453,37 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                               ),
                                             ),
                                             Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                              child: DropdownButtonFormField<ExerciseType>(
+                                                initialValue: progEx.type,
+                                                decoration: const InputDecoration(
+                                                  labelText: "Type d'évaluation",
+                                                  isDense: true,
+                                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                  border: OutlineInputBorder(),
+                                                ),
+                                                items: ExerciseType.values.map((t) {
+                                                  return DropdownMenuItem(value: t, child: Text(t.label));
+                                                }).toList(),
+                                                onChanged: (val) {
+                                                  if (val != null) {
+                                                    setState(() {
+                                                      _selectedExercises[idx] = ProgramExercise(
+                                                        exerciseId: progEx.exerciseId,
+                                                        type: val,
+                                                        setsCount: progEx.setsCount,
+                                                        repsCount: val == ExerciseType.reps ? 10 : 0,
+                                                        restTime: progEx.restTime,
+                                                        durationTarget: val == ExerciseType.time ? 60 : 0,
+                                                        distanceTarget: val == ExerciseType.distance ? 5.0 : 0.0,
+                                                      );
+                                                    });
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
                                               child: Row(
                                                 children: [
                                                   Expanded(
@@ -477,6 +508,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                         final count = int.parse(val!);
                                                         _selectedExercises[idx] = ProgramExercise(
                                                           exerciseId: progEx.exerciseId,
+                                                          type: progEx.type,
                                                           setsCount: count,
                                                           repsCount: _selectedExercises[idx].repsCount,
                                                           restTime: _selectedExercises[idx].restTime,
@@ -487,7 +519,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
-                                                  if (ex.type == ExerciseType.reps)
+                                                  if (progEx.type == ExerciseType.reps)
                                                     Expanded(
                                                       child: TextFormField(
                                                         initialValue: progEx.repsCount.toString(),
@@ -510,6 +542,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                           final count = int.parse(val!);
                                                           _selectedExercises[idx] = ProgramExercise(
                                                             exerciseId: progEx.exerciseId,
+                                                            type: progEx.type,
                                                             setsCount: _selectedExercises[idx].setsCount,
                                                             repsCount: count,
                                                             restTime: _selectedExercises[idx].restTime,
@@ -519,7 +552,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                         },
                                                       ),
                                                     )
-                                                  else if (ex.type == ExerciseType.time)
+                                                  else if (progEx.type == ExerciseType.time)
                                                     Expanded(
                                                       child: TextFormField(
                                                         initialValue: progEx.durationTarget.toString(),
@@ -542,6 +575,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                           final count = int.parse(val!);
                                                           _selectedExercises[idx] = ProgramExercise(
                                                             exerciseId: progEx.exerciseId,
+                                                            type: progEx.type,
                                                             setsCount: _selectedExercises[idx].setsCount,
                                                             repsCount: _selectedExercises[idx].repsCount,
                                                             restTime: _selectedExercises[idx].restTime,
@@ -551,7 +585,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                         },
                                                       ),
                                                     )
-                                                  else if (ex.type == ExerciseType.distance)
+                                                  else if (progEx.type == ExerciseType.distance)
                                                     Expanded(
                                                       child: TextFormField(
                                                         initialValue: progEx.distanceTarget.toString(),
@@ -574,6 +608,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                           final dist = double.parse(val!);
                                                           _selectedExercises[idx] = ProgramExercise(
                                                             exerciseId: progEx.exerciseId,
+                                                            type: progEx.type,
                                                             setsCount: _selectedExercises[idx].setsCount,
                                                             repsCount: _selectedExercises[idx].repsCount,
                                                             restTime: _selectedExercises[idx].restTime,
@@ -606,6 +641,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                         final count = int.parse(val!);
                                                         _selectedExercises[idx] = ProgramExercise(
                                                           exerciseId: progEx.exerciseId,
+                                                          type: progEx.type,
                                                           setsCount: _selectedExercises[idx].setsCount,
                                                           repsCount: _selectedExercises[idx].repsCount,
                                                           restTime: count,
@@ -707,11 +743,12 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                               _selectedExercises.add(
                                 ProgramExercise(
                                   exerciseId: ex.id,
-                                  setsCount: ex.type == ExerciseType.distance ? 1 : 3,
-                                  repsCount: ex.type == ExerciseType.reps ? 10 : 0,
-                                  restTime: ex.type == ExerciseType.distance ? 0 : 90,
-                                  durationTarget: ex.type == ExerciseType.time ? 60 : 0,
-                                  distanceTarget: ex.type == ExerciseType.distance ? 5.0 : 0.0,
+                                  type: ExerciseType.reps,
+                                  setsCount: 3,
+                                  repsCount: 10,
+                                  restTime: 90,
+                                  durationTarget: 0,
+                                  distanceTarget: 0.0,
                                 ),
                               );
                             }

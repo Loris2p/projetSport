@@ -455,6 +455,21 @@ class SessionDetailScreen extends StatelessWidget {
                                   if (set.type == SetType.dropSet) typeLabel = "Drop";
                                   if (set.type == SetType.failure) typeLabel = "Ech.";
 
+                                  String formatDuration(int seconds) {
+                                    final m = seconds ~/ 60;
+                                    final s = seconds % 60;
+                                    return m > 0 ? "$m:${s.toString().padLeft(2, '0')}" : "${s}s";
+                                  }
+
+                                  String metricsText = '';
+                                  if (perfEx.type == ExerciseType.distance) {
+                                    metricsText = "${set.distance.toStringAsFixed(1)} km en ${formatDuration(set.duration)}";
+                                  } else if (perfEx.type == ExerciseType.time) {
+                                    metricsText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} lvl x ${formatDuration(set.duration)}";
+                                  } else {
+                                    metricsText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps}";
+                                  }
+
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                                     child: Row(
@@ -467,14 +482,16 @@ class SessionDetailScreen extends StatelessWidget {
                                         Row(
                                           children: [
                                             Text(
-                                              "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps}",
+                                              metricsText,
                                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              "(1RM est. ${set.estimated1RM.toStringAsFixed(1).replaceAll('.0', '')} kg)",
-                                              style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                                            ),
+                                            if (perfEx.type == ExerciseType.reps) ...[
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                "(1RM est. ${set.estimated1RM.toStringAsFixed(1).replaceAll('.0', '')} kg)",
+                                                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                              ),
+                                            ],
                                             if (set.isWeightPR || set.is1RMPR) ...[
                                               const SizedBox(width: 4),
                                               const Tooltip(

@@ -512,7 +512,6 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     String category = ex?.category ?? 'Pectoraux';
     String notes = ex?.notes ?? '';
     bool isCustom = ex?.isCustom ?? false;
-    ExerciseType type = ex?.type ?? ExerciseType.reps;
 
     final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio','Autre'];
     if (ex != null && !categories.contains(ex.category)) {
@@ -553,26 +552,6 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) category = val;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<ExerciseType>(
-                        initialValue: type,
-                        decoration: const InputDecoration(
-                          labelText: "Type d'évaluation",
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: ExerciseType.reps, child: Text("Répétitions & Poids")),
-                          DropdownMenuItem(value: ExerciseType.time, child: Text("Temps / Durée")),
-                          DropdownMenuItem(value: ExerciseType.distance, child: Text("Distance & Temps")),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              type = val;
-                            });
-                          }
                         },
                       ),
                       const SizedBox(height: 16),
@@ -618,7 +597,6 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           category: category,
                           notes: notes,
                           isCustom: isCustom,
-                          type: type,
                         );
                         provider.updateExercise(newEx);
                       } else {
@@ -628,7 +606,6 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           category: category,
                           notes: notes,
                           isCustom: isCustom,
-                          type: type,
                         );
                         provider.updateExercise(updated);
                       }

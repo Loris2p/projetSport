@@ -1,4 +1,4 @@
-enum ExerciseType { reps, time, distance }
+export 'exercise_type.dart';
 
 class Exercise {
   final String id;
@@ -6,7 +6,6 @@ class Exercise {
   final String category; // ex: Pectoraux, Dos, Jambes, Cardio
   final String? notes; 
   final bool isCustom; 
-  final ExerciseType type;
 
   Exercise({
     required this.id,
@@ -14,7 +13,6 @@ class Exercise {
     required this.category,
     this.notes,
     this.isCustom = false,
-    this.type = ExerciseType.reps,
   });
 
   Map<String, dynamic> toJson() {
@@ -24,7 +22,6 @@ class Exercise {
       'category': category,
       'notes': notes,
       'isCustom': isCustom,
-      'type': type.name,
     };
   }
 
@@ -35,10 +32,7 @@ class Exercise {
       category: json['category'] as String,
       notes: json['notes'] as String?,
       isCustom: json['isCustom'] as bool? ?? false,
-      type: ExerciseType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => ExerciseType.reps,
-      ),
     );
   }
 }
+

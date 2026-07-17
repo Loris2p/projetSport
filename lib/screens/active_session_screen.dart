@@ -219,6 +219,8 @@ class ActiveSessionScreen extends StatelessWidget {
                               _showNotesDialog(context, perfEx, provider);
                             } else if (value == 'group') {
                               _showGroupDialog(context, perfEx, provider);
+                            } else if (value == 'type') {
+                              _showChangeTypeDialog(context, perfEx, provider);
                             }
                           },
                           itemBuilder: (context) => [
@@ -239,6 +241,16 @@ class ActiveSessionScreen extends StatelessWidget {
                                   Icon(Icons.group_work, size: 20),
                                   SizedBox(width: 8),
                                   Text("Associer à un groupe"),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'type',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.fitness_center, size: 20),
+                                  SizedBox(width: 8),
+                                  Text("Type d'évaluation"),
                                 ],
                               ),
                             ),
@@ -276,18 +288,40 @@ class ActiveSessionScreen extends StatelessWidget {
                     // Sets Header
                     Row(
                       children: [
-                        const SizedBox(width: 45, child: Text("SÉRIE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
-                        if (exercise.type == ExerciseType.reps) ...[
-                          const Expanded(flex: 3, child: Center(child: Text("POIDS (KG)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                          const Expanded(flex: 3, child: Center(child: Text("RÉPETS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                        ] else if (exercise.type == ExerciseType.time) ...[
-                          const Expanded(flex: 3, child: Center(child: Text("RÉSISTANCE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                          const Expanded(flex: 3, child: Center(child: Text("TEMPS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                        ] else if (exercise.type == ExerciseType.distance) ...[
-                          const Expanded(flex: 3, child: Center(child: Text("DISTANCE (KM)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                          const Expanded(flex: 3, child: Center(child: Text("TEMPS", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
-                        ],
-                        const SizedBox(width: 45, child: Center(child: Text("OK", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)))),
+                        SizedBox(
+                          width: 45,
+                          child: Text(
+                            perfEx.type.headers[0],
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Center(
+                            child: Text(
+                              perfEx.type.headers[1],
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Center(
+                            child: Text(
+                              perfEx.type.headers[2],
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 45,
+                          child: Center(
+                            child: Text(
+                              perfEx.type.headers[3],
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const Divider(),
@@ -335,10 +369,6 @@ class ActiveSessionScreen extends StatelessWidget {
     WorkoutProvider provider,
   ) {
     final bool isCompleted = set.isCompleted;
-    final exercise = provider.exercises.firstWhere(
-      (e) => e.id == perfEx.exerciseId,
-      orElse: () => Exercise(id: perfEx.exerciseId, name: "Exercice Supprimé", category: "Inconnue"),
-    );
 
     String formatDuration(int seconds) {
       final m = seconds ~/ 60;
@@ -402,7 +432,7 @@ class ActiveSessionScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (exercise.type == ExerciseType.distance) ...[
+                if (perfEx.type == ExerciseType.distance) ...[
                   // Distance controller
                   _buildIncrementButton(
                     icon: Icons.remove,
@@ -440,7 +470,7 @@ class ActiveSessionScreen extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      exercise.type == ExerciseType.time 
+                      perfEx.type == ExerciseType.time 
                           ? "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} lvl"
                           : "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg",
                       textAlign: TextAlign.center,
@@ -469,7 +499,7 @@ class ActiveSessionScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (exercise.type == ExerciseType.reps) ...[
+                if (perfEx.type == ExerciseType.reps) ...[
                   // Reps controller
                   _buildIncrementButton(
                     icon: Icons.remove,
@@ -1002,6 +1032,30 @@ class ActiveSessionScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showChangeTypeDialog(BuildContext context, PerformedExercise perfEx, WorkoutProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Type d'évaluation"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ExerciseType.values.map((t) {
+              return ListTile(
+                title: Text(t.label),
+                trailing: perfEx.type == t ? const Icon(Icons.check, color: Color(0xff2563eb)) : null,
+                onTap: () {
+                  provider.updateActiveSessionExerciseType(perfEx.exerciseId, t);
+                  Navigator.pop(ctx);
+                },
+              );
+            }).toList(),
           ),
         );
       },

@@ -102,14 +102,13 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Exercises ---
-  Future<void> createCustomExercise(String name, String category, {String? notes, ExerciseType type = ExerciseType.reps}) async {
+  Future<void> createCustomExercise(String name, String category, {String? notes}) async {
     final newExercise = Exercise(
       id: 'custom_${_uuid.v4()}',
       name: name,
       category: category,
       notes: notes,
       isCustom: true,
-      type: type,
     );
     await repository.saveExercise(newExercise);
     _exercises = repository.getExercises();
@@ -184,6 +183,7 @@ class WorkoutProvider with ChangeNotifier {
           PerformedExercise(
             exerciseId: exercise.exerciseId,
             groupId: exerciseGroupId,
+            type: exercise.type,
             sets: List.generate(
               exercise.setsCount,
               (_) => ExerciseSet(
@@ -229,12 +229,29 @@ class WorkoutProvider with ChangeNotifier {
     _activeSession!.exercises.add(
       PerformedExercise(
         exerciseId: exercise.id,
+        type: ExerciseType.reps,
         sets: [
           ExerciseSet(id: _uuid.v4(), type: SetType.normal),
         ],
       ),
     );
     notifyListeners();
+  }
+
+  void updateActiveSessionExerciseType(String exerciseId, ExerciseType type) {
+    if (_activeSession == null) return;
+    final index = _activeSession!.exercises.indexWhere((e) => e.exerciseId == exerciseId);
+    if (index >= 0) {
+      final oldPerfEx = _activeSession!.exercises[index];
+      _activeSession!.exercises[index] = PerformedExercise(
+        exerciseId: exerciseId,
+        type: type,
+        sets: oldPerfEx.sets,
+        notes: oldPerfEx.notes,
+        groupId: oldPerfEx.groupId,
+      );
+      notifyListeners();
+    }
   }
 
   void removeExerciseFromActiveSession(String exerciseId) {
