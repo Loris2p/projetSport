@@ -511,6 +511,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     String name = ex?.name ?? '';
     String category = ex?.category ?? 'Pectoraux';
     String notes = ex?.notes ?? '';
+    String videoUrl = ex?.videoUrl ?? '';
     bool isCustom = ex?.isCustom ?? false;
 
     final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio','Autre'];
@@ -565,6 +566,17 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         onSaved: (val) => notes = val?.trim() ?? '',
                       ),
                       const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: videoUrl,
+                        decoration: const InputDecoration(
+                          labelText: "Lien vidéo YouTube (optionnel)",
+                          hintText: "https://www.youtube.com/watch?v=...",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.video_library_outlined),
+                        ),
+                        onSaved: (val) => videoUrl = val?.trim() ?? '',
+                      ),
+                      const SizedBox(height: 16),
                       SwitchListTile(
                         title: const Text("Exercice privé (personnalisé)"),
                         subtitle: const Text("Si désactivé, l'exercice sera 'Public' (visible par tous)"),
@@ -590,12 +602,15 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       formKey.currentState!.save();
+                      final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
+                      final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
                       if (ex == null) {
                         final newEx = Exercise(
                           id: 'exercise_${DateTime.now().millisecondsSinceEpoch}',
                           name: name,
                           category: category,
-                          notes: notes,
+                          notes: cleanNotes,
+                          videoUrl: cleanVideoUrl,
                           isCustom: isCustom,
                         );
                         provider.updateExercise(newEx);
@@ -604,7 +619,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           id: ex.id,
                           name: name,
                           category: category,
-                          notes: notes,
+                          notes: cleanNotes,
+                          videoUrl: cleanVideoUrl,
                           isCustom: isCustom,
                         );
                         provider.updateExercise(updated);

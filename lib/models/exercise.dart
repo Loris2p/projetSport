@@ -4,14 +4,16 @@ class Exercise {
   final String id;
   final String name;
   final String category; // ex: Pectoraux, Dos, Jambes, Cardio
-  final String? notes; 
-  final bool isCustom; 
+  final String? notes;
+  final String? videoUrl;
+  final bool isCustom;
 
   Exercise({
     required this.id,
     required this.name,
     required this.category,
     this.notes,
+    this.videoUrl,
     this.isCustom = false,
   });
 
@@ -21,6 +23,7 @@ class Exercise {
       'name': name,
       'category': category,
       'notes': notes,
+      'videoUrl': videoUrl,
       'isCustom': isCustom,
     };
   }
@@ -31,6 +34,7 @@ class Exercise {
       name: json['name'] as String,
       category: json['category'] as String,
       notes: json['notes'] as String?,
+      videoUrl: json['videoUrl'] as String?,
       isCustom: json['isCustom'] as bool? ?? false,
     );
   }

@@ -189,6 +189,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     String name = ex?.name ?? '';
     String category = ex?.category ?? 'Pectoraux';
     String notes = ex?.notes ?? '';
+    String videoUrl = ex?.videoUrl ?? '';
 
     // Standard category presets for easier input
     final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'];
@@ -240,6 +241,17 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                     maxLines: 2,
                     onSaved: (val) => notes = val?.trim() ?? '',
                   ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    initialValue: videoUrl,
+                    decoration: const InputDecoration(
+                      labelText: "Lien vidéo YouTube (optionnel)",
+                      hintText: "https://www.youtube.com/watch?v=...",
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.video_library_outlined),
+                    ),
+                    onSaved: (val) => videoUrl = val?.trim() ?? '',
+                  ),
                 ],
               ),
             ),
@@ -254,14 +266,17 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   formKey.currentState!.save();
+                  final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
+                  final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
                   if (ex == null) {
-                    provider.createCustomExercise(name, category, notes: notes);
+                    provider.createCustomExercise(name, category, notes: cleanNotes, videoUrl: cleanVideoUrl);
                   } else {
                     final updated = Exercise(
                       id: ex.id,
                       name: name,
                       category: category,
-                      notes: notes,
+                      notes: cleanNotes,
+                      videoUrl: cleanVideoUrl,
                       isCustom: true,
                     );
                     provider.updateExercise(updated);

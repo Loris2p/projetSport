@@ -102,12 +102,13 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Exercises ---
-  Future<void> createCustomExercise(String name, String category, {String? notes}) async {
+  Future<void> createCustomExercise(String name, String category, {String? notes, String? videoUrl}) async {
     final newExercise = Exercise(
       id: 'custom_${_uuid.v4()}',
       name: name,
       category: category,
       notes: notes,
+      videoUrl: videoUrl,
       isCustom: true,
     );
     await repository.saveExercise(newExercise);
