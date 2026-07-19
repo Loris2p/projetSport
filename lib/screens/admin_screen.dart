@@ -4,6 +4,7 @@ import '../models/user_profile.dart';
 import '../models/exercise.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/youtube_player_dialog.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -467,6 +468,12 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 24),
+                                tooltip: "Voir la vidéo d'explication",
+                                onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                              ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 20),
                               onPressed: () => _showExerciseDialog(ex, workoutProvider),

@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/youtube_player_dialog.dart';
 
 class ActiveSessionScreen extends StatelessWidget {
   const ActiveSessionScreen({super.key});
@@ -210,6 +211,12 @@ class ActiveSessionScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (exercise.videoUrl != null && exercise.videoUrl!.trim().isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 28),
+                            tooltip: "Vidéo d'explication",
+                            onPressed: () => YoutubePlayerDialog.show(context, exercise.name, exercise.videoUrl!),
+                          ),
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.more_vert, color: Colors.grey),
                           onSelected: (value) {
@@ -221,9 +228,22 @@ class ActiveSessionScreen extends StatelessWidget {
                               _showGroupDialog(context, perfEx, provider);
                             } else if (value == 'type') {
                               _showChangeTypeDialog(context, perfEx, provider);
+                            } else if (value == 'video' && exercise.videoUrl != null) {
+                              YoutubePlayerDialog.show(context, exercise.name, exercise.videoUrl!);
                             }
                           },
                           itemBuilder: (context) => [
+                            if (exercise.videoUrl != null && exercise.videoUrl!.trim().isNotEmpty)
+                              const PopupMenuItem(
+                                value: 'video',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.play_circle_fill, color: Colors.red, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("Vidéo d'explication"),
+                                  ],
+                                ),
+                              ),
                             const PopupMenuItem(
                               value: 'notes',
                               child: Row(

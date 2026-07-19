@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/program_exercise.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/youtube_player_dialog.dart';
 import 'active_session_screen.dart';
 
 class ProgramsScreen extends StatelessWidget {
@@ -137,6 +138,16 @@ class ProgramsScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 14),
                     ),
                   ),
+                  if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty) ...[
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 22),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: "Voir la vidéo d'explication",
+                      onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(

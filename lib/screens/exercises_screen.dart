@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/youtube_player_dialog.dart';
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key});
@@ -154,21 +155,28 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                               ],
                             ],
                           ),
-                          trailing: ex.isCustom
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_outlined, size: 20),
-                                      onPressed: () => _showExerciseDialog(context, ex, workoutProvider),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                                      onPressed: () => _showDeleteConfirm(context, ex, workoutProvider),
-                                    ),
-                                  ],
-                                )
-                              : const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 24),
+                                  tooltip: "Voir la vidéo d'explication",
+                                  onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                                ),
+                              if (ex.isCustom) ...[
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 20),
+                                  onPressed: () => _showExerciseDialog(context, ex, workoutProvider),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                                  onPressed: () => _showDeleteConfirm(context, ex, workoutProvider),
+                                ),
+                              ] else if (ex.videoUrl == null || ex.videoUrl!.trim().isEmpty)
+                                const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                            ],
+                          ),
                         ),
                       );
                     },
