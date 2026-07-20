@@ -102,11 +102,11 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   // --- Exercises ---
-  Future<void> createCustomExercise(String name, String category, {String? notes, String? videoUrl}) async {
+  Future<void> createCustomExercise(String name, {List<String>? categories, String? category, String? notes, String? videoUrl}) async {
     final newExercise = Exercise(
       id: 'custom_${_uuid.v4()}',
       name: name,
-      category: category,
+      categories: categories ?? (category != null && category.isNotEmpty ? [category] : ['Pectoraux']),
       notes: notes,
       videoUrl: videoUrl,
       isCustom: true,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
 
 class ExercisesScreen extends StatefulWidget {
@@ -23,12 +24,14 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     // Filter exercises based on search query and category
     final filteredExercises = allExercises.where((ex) {
       final matchesSearch = ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == 'Tous' || ex.category == _selectedCategory;
+      final matchesCategory = _selectedCategory == 'Tous' ||
+          ex.categories.contains(_selectedCategory) ||
+          ex.category == _selectedCategory;
       return matchesSearch && matchesCategory;
     }).toList();
 
     // Get unique categories for filtering
-    final categories = ['Tous', ...allExercises.map((e) => e.category).toSet()];
+    final filterCategories = ['Tous', ...CategoryHelper.allCategoryNames];
 
     return Scaffold(
       appBar: AppBar(
@@ -42,52 +45,70 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
       ),
       body: Column(
         children: [
-          // Search & Filter header
+          // Search bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: "Rechercher un exercice...",
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      fillColor: const Color(0xff1e1e24),
-                      filled: true,
+            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Rechercher un exercice...",
+                prefixIcon: const Icon(Icons.search, size: 20),
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                fillColor: const Color(0xff1e1e24),
+                filled: true,
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+
+          // Horizontal Category Filter Chips
+          SizedBox(
+            height: 42,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              itemCount: filterCategories.length,
+              itemBuilder: (context, idx) {
+                final cat = filterCategories[idx];
+                final isSelected = _selectedCategory == cat;
+                final info = cat != 'Tous' ? CategoryHelper.getInfo(cat) : null;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6.0),
+                  child: FilterChip(
+                    selected: isSelected,
+                    label: Text(cat),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: isSelected
+                          ? Colors.white
+                          : (info != null ? info.color : Colors.grey[300]),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
-                    onChanged: (val) {
+                    avatar: info != null
+                        ? Icon(info.icon, size: 14, color: isSelected ? Colors.white : info.color)
+                        : null,
+                    selectedColor: info != null ? info.color : const Color(0xff2563eb),
+                    backgroundColor: const Color(0xff1e1e24),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    showCheckmark: false,
+                    onSelected: (sel) {
                       setState(() {
-                        _searchQuery = val;
+                        _selectedCategory = cat;
                       });
                     },
                   ),
-                ),
-                const SizedBox(width: 12),
-                DropdownButton<String>(
-                  value: _selectedCategory,
-                  dropdownColor: const Color(0xff1e1e24),
-                  underline: const SizedBox(),
-                  icon: const Icon(Icons.filter_list, color: Color(0xff2563eb)),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedCategory = newValue;
-                      });
-                    }
-                  },
-                  items: categories.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value, style: const TextStyle(fontSize: 14)),
-                    );
-                  }).toList(),
-                )
-              ],
+                );
+              },
             ),
           ),
-          
+
+          const SizedBox(height: 8),
+
           // Exercises List
           Expanded(
             child: filteredExercises.isEmpty
@@ -142,10 +163,10 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 4),
-                              Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 6),
+                              MultiCategoryBadges(categories: ex.categories, compact: true),
                               if (ex.notes != null && ex.notes!.isNotEmpty) ...[
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Text(
                                   ex.notes!,
                                   style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
@@ -195,105 +216,109 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   void _showExerciseDialog(BuildContext context, Exercise? ex, WorkoutProvider provider) {
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
-    String category = ex?.category ?? 'Pectoraux';
+    List<String> selectedCategories = ex != null ? List.from(ex.categories) : ['Pectoraux'];
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
-
-    // Standard category presets for easier input
-    final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'];
-    if (ex != null && !categories.contains(ex.category)) {
-      categories.add(ex.category);
-    }
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: Text(ex == null ? "Nouvel Exercice" : "Modifier l'Exercice"),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    initialValue: name,
-                    decoration: const InputDecoration(
-                      labelText: "Nom de l'exercice",
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
-                    onSaved: (val) => name = val!.trim(),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(ex == null ? "Nouvel Exercice" : "Modifier l'Exercice"),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        initialValue: name,
+                        decoration: const InputDecoration(
+                          labelText: "Nom de l'exercice",
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
+                        onSaved: (val) => name = val!.trim(),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Catégorie(s) musculaire(s) :",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      CategoryMultiSelect(
+                        selectedCategories: selectedCategories,
+                        onChanged: (updated) {
+                          setDialogState(() {
+                            selectedCategories = updated;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: notes,
+                        decoration: const InputDecoration(
+                          labelText: "Notes / Description (optionnel)",
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                        onSaved: (val) => notes = val?.trim() ?? '',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: videoUrl,
+                        decoration: const InputDecoration(
+                          labelText: "Lien vidéo YouTube (optionnel)",
+                          hintText: "https://www.youtube.com/watch?v=...",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.video_library_outlined),
+                        ),
+                        onSaved: (val) => videoUrl = val?.trim() ?? '',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: categories.contains(category) ? category : categories.first,
-                    decoration: const InputDecoration(
-                      labelText: "Catégorie",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: categories.map((cat) {
-                      return DropdownMenuItem(value: cat, child: Text(cat));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) category = val;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: notes,
-                    decoration: const InputDecoration(
-                      labelText: "Notes / Description",
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                    onSaved: (val) => notes = val?.trim() ?? '',
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: videoUrl,
-                    decoration: const InputDecoration(
-                      labelText: "Lien vidéo YouTube (optionnel)",
-                      hintText: "https://www.youtube.com/watch?v=...",
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.video_library_outlined),
-                    ),
-                    onSaved: (val) => videoUrl = val?.trim() ?? '',
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Annuler"),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-            ElevatedButton(
-              child: const Text("Enregistrer"),
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  formKey.currentState!.save();
-                  final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
-                  final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
-                  if (ex == null) {
-                    provider.createCustomExercise(name, category, notes: cleanNotes, videoUrl: cleanVideoUrl);
-                  } else {
-                    final updated = Exercise(
-                      id: ex.id,
-                      name: name,
-                      category: category,
-                      notes: cleanNotes,
-                      videoUrl: cleanVideoUrl,
-                      isCustom: true,
-                    );
-                    provider.updateExercise(updated);
-                  }
-                  Navigator.pop(ctx);
-                }
-              },
-            ),
-          ],
+              actions: [
+                TextButton(
+                  child: const Text("Annuler"),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+                ElevatedButton(
+                  child: const Text("Enregistrer"),
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      formKey.currentState!.save();
+                      final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
+                      final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
+                      if (ex == null) {
+                        provider.createCustomExercise(
+                          name,
+                          categories: selectedCategories,
+                          notes: cleanNotes,
+                          videoUrl: cleanVideoUrl,
+                        );
+                      } else {
+                        final updated = Exercise(
+                          id: ex.id,
+                          name: name,
+                          categories: selectedCategories,
+                          notes: cleanNotes,
+                          videoUrl: cleanVideoUrl,
+                          isCustom: true,
+                        );
+                        provider.updateExercise(updated);
+                      }
+                      Navigator.pop(ctx);
+                    }
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -311,8 +336,9 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               child: const Text("Annuler"),
               onPressed: () => Navigator.pop(ctx),
             ),
-            TextButton(
-              child: const Text("Supprimer", style: TextStyle(color: Colors.redAccent)),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: const Text("Supprimer", style: TextStyle(color: Colors.white)),
               onPressed: () {
                 provider.deleteExercise(ex.id);
                 Navigator.pop(ctx);

@@ -4,6 +4,7 @@ import '../models/user_profile.dart';
 import '../models/exercise.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -347,56 +348,76 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
 
     final filteredExercises = allExercises.where((ex) {
       final matchesSearch = ex.name.toLowerCase().contains(_exerciseSearchQuery.toLowerCase());
-      final matchesCategory = _selectedExerciseCategory == 'Tous' || ex.category == _selectedExerciseCategory;
+      final matchesCategory = _selectedExerciseCategory == 'Tous' ||
+          ex.categories.contains(_selectedExerciseCategory) ||
+          ex.category == _selectedExerciseCategory;
       return matchesSearch && matchesCategory;
     }).toList();
 
-    final categories = ['Tous', ...allExercises.map((e) => e.category).toSet()];
+    final filterCategories = ['Tous', ...CategoryHelper.allCategoryNames];
 
     return Column(
       children: [
         // Search & Filter header
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: "Rechercher un exercice...",
-                    prefixIcon: Icon(Icons.search, size: 20),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    fillColor: Color(0xff1e1e24),
-                    filled: true,
-                  ),
-                  onChanged: (val) {
-                    setState(() {
-                      _exerciseSearchQuery = val;
-                    });
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: "Rechercher un exercice...",
+                  prefixIcon: Icon(Icons.search, size: 20),
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  fillColor: Color(0xff1e1e24),
+                  filled: true,
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    _exerciseSearchQuery = val;
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 38,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: filterCategories.length,
+                  itemBuilder: (context, idx) {
+                    final cat = filterCategories[idx];
+                    final isSelected = _selectedExerciseCategory == cat;
+                    final info = cat != 'Tous' ? CategoryHelper.getInfo(cat) : null;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6.0),
+                      child: FilterChip(
+                        selected: isSelected,
+                        label: Text(cat),
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          color: isSelected
+                              ? Colors.white
+                              : (info != null ? info.color : Colors.grey[300]),
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        avatar: info != null
+                            ? Icon(info.icon, size: 14, color: isSelected ? Colors.white : info.color)
+                            : null,
+                        selectedColor: info != null ? info.color : const Color(0xff2563eb),
+                        backgroundColor: const Color(0xff1e1e24),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        showCheckmark: false,
+                        onSelected: (sel) {
+                          setState(() {
+                            _selectedExerciseCategory = cat;
+                          });
+                        },
+                      ),
+                    );
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              DropdownButton<String>(
-                value: _selectedExerciseCategory,
-                dropdownColor: const Color(0xff1e1e24),
-                underline: const SizedBox(),
-                icon: const Icon(Icons.filter_list, color: Color(0xff2563eb)),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedExerciseCategory = newValue;
-                    });
-                  }
-                },
-                items: categories.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value, style: const TextStyle(fontSize: 14)),
-                  );
-                }).toList(),
-              )
             ],
           ),
         ),
@@ -452,8 +473,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 4),
-                            Text(ex.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            const SizedBox(height: 6),
+                            MultiCategoryBadges(categories: ex.categories, compact: true),
                             if (ex.notes != null && ex.notes!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
@@ -516,15 +537,10 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
   void _showExerciseDialog(Exercise? ex, WorkoutProvider provider) {
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
-    String category = ex?.category ?? 'Pectoraux';
+    List<String> selectedCategories = ex != null ? List.from(ex.categories) : ['Pectoraux'];
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
     bool isCustom = ex?.isCustom ?? false;
-
-    final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio','Autre'];
-    if (ex != null && !categories.contains(ex.category)) {
-      categories.add(ex.category);
-    }
 
     showDialog(
       context: context,
@@ -538,6 +554,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                   key: formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextFormField(
                         initialValue: name,
@@ -549,17 +566,17 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         onSaved: (val) => name = val!.trim(),
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: categories.contains(category) ? category : categories.first,
-                        decoration: const InputDecoration(
-                          labelText: "Catégorie",
-                          border: OutlineInputBorder(),
-                        ),
-                        items: categories.map((cat) {
-                          return DropdownMenuItem(value: cat, child: Text(cat));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) category = val;
+                      const Text(
+                        "Catégorie(s) musculaire(s) :",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      CategoryMultiSelect(
+                        selectedCategories: selectedCategories,
+                        onChanged: (updated) {
+                          setDialogState(() {
+                            selectedCategories = updated;
+                          });
                         },
                       ),
                       const SizedBox(height: 16),
@@ -615,7 +632,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         final newEx = Exercise(
                           id: 'exercise_${DateTime.now().millisecondsSinceEpoch}',
                           name: name,
-                          category: category,
+                          categories: selectedCategories,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                           isCustom: isCustom,
@@ -625,7 +642,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         final updated = Exercise(
                           id: ex.id,
                           name: name,
-                          category: category,
+                          categories: selectedCategories,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                           isCustom: isCustom,

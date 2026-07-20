@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
 
 class ActiveSessionScreen extends StatelessWidget {
@@ -203,11 +204,8 @@ class ActiveSessionScreen extends StatelessWidget {
                                 exercise.name,
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                exercise.category,
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
+                              const SizedBox(height: 4),
+                              MultiCategoryBadges(categories: exercise.categories, compact: true),
                             ],
                           ),
                         ),
