@@ -321,7 +321,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
 
                   // Selected Exercises Reorderable List
                   const Text(
-                    "Ordre des exercices (glissez-déposez)",
+                    "Ordre des exercices",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   const SizedBox(height: 8),
@@ -475,7 +475,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                         setsCount: progEx.setsCount,
                                                         repsCount: val == ExerciseType.reps ? 10 : 0,
                                                         restTime: progEx.restTime,
-                                                        durationTarget: val == ExerciseType.time ? 60 : 0,
+                                                        durationTarget: val == ExerciseType.time ? 0 : 0,
                                                         distanceTarget: val == ExerciseType.distance ? 5.0 : 0.0,
                                                       );
                                                     });
@@ -555,35 +555,86 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                                     )
                                                   else if (progEx.type == ExerciseType.time)
                                                     Expanded(
-                                                      child: TextFormField(
-                                                        initialValue: progEx.durationTarget.toString(),
-                                                        keyboardType: TextInputType.number,
-                                                        style: const TextStyle(fontSize: 13),
+                                                      flex: 2,
+                                                      child: InputDecorator(
                                                         decoration: const InputDecoration(
-                                                          labelText: "Durée (s)",
-                                                          labelStyle: TextStyle(fontSize: 11),
+                                                          labelText: "Temps cible",
+                                                          labelStyle: TextStyle(fontSize: 10, color: Colors.grey),
                                                           isDense: true,
-                                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                          contentPadding: EdgeInsets.fromLTRB(6, 4, 6, 4),
                                                           border: OutlineInputBorder(),
                                                         ),
-                                                        validator: (val) {
-                                                          if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0) {
-                                                            return "Min 1";
-                                                          }
-                                                          return null;
-                                                        },
-                                                        onSaved: (val) {
-                                                          final count = int.parse(val!);
-                                                          _selectedExercises[idx] = ProgramExercise(
-                                                            exerciseId: progEx.exerciseId,
-                                                            type: progEx.type,
-                                                            setsCount: _selectedExercises[idx].setsCount,
-                                                            repsCount: _selectedExercises[idx].repsCount,
-                                                            restTime: _selectedExercises[idx].restTime,
-                                                            durationTarget: count,
-                                                            distanceTarget: _selectedExercises[idx].distanceTarget,
-                                                          );
-                                                        },
+                                                        child: Row(
+                                                          children: [
+                                                            Expanded(
+                                                              child: TextFormField(
+                                                                initialValue: (progEx.durationTarget ~/ 60).toString(),
+                                                                keyboardType: TextInputType.number,
+                                                                style: const TextStyle(fontSize: 12),
+                                                                decoration: const InputDecoration(
+                                                                  labelText: "Min",
+                                                                  labelStyle: TextStyle(fontSize: 9),
+                                                                  isDense: true,
+                                                                  contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                                                  border: OutlineInputBorder(),
+                                                                ),
+                                                                validator: (val) {
+                                                                  if (val != null && val.isNotEmpty && int.tryParse(val) == null) {
+                                                                    return "Invalide";
+                                                                  }
+                                                                  return null;
+                                                                },
+                                                                onSaved: (val) {
+                                                                  final min = int.tryParse(val ?? '') ?? 0;
+                                                                  final currentSec = _selectedExercises[idx].durationTarget % 60;
+                                                                  _selectedExercises[idx] = ProgramExercise(
+                                                                    exerciseId: progEx.exerciseId,
+                                                                    type: progEx.type,
+                                                                    setsCount: _selectedExercises[idx].setsCount,
+                                                                    repsCount: _selectedExercises[idx].repsCount,
+                                                                    restTime: _selectedExercises[idx].restTime,
+                                                                    durationTarget: (min * 60) + currentSec,
+                                                                    distanceTarget: _selectedExercises[idx].distanceTarget,
+                                                                  );
+                                                                },
+                                                              ),
+                                                            ),
+                                                            const SizedBox(width: 4),
+                                                            Expanded(
+                                                              child: TextFormField(
+                                                                initialValue: (progEx.durationTarget % 60).toString(),
+                                                                keyboardType: TextInputType.number,
+                                                                style: const TextStyle(fontSize: 12),
+                                                                decoration: const InputDecoration(
+                                                                  labelText: "Sec",
+                                                                  labelStyle: TextStyle(fontSize: 9),
+                                                                  isDense: true,
+                                                                  contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                                                  border: OutlineInputBorder(),
+                                                                ),
+                                                                validator: (val) {
+                                                                  if (val != null && val.isNotEmpty && int.tryParse(val) == null) {
+                                                                    return "Invalide";
+                                                                  }
+                                                                  return null;
+                                                                },
+                                                                onSaved: (val) {
+                                                                  final sec = int.tryParse(val ?? '') ?? 0;
+                                                                  final currentMin = _selectedExercises[idx].durationTarget ~/ 60;
+                                                                  _selectedExercises[idx] = ProgramExercise(
+                                                                    exerciseId: progEx.exerciseId,
+                                                                    type: progEx.type,
+                                                                    setsCount: _selectedExercises[idx].setsCount,
+                                                                    repsCount: _selectedExercises[idx].repsCount,
+                                                                    restTime: _selectedExercises[idx].restTime,
+                                                                    durationTarget: (currentMin * 60) + sec,
+                                                                    distanceTarget: _selectedExercises[idx].distanceTarget,
+                                                                  );
+                                                                },
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
                                                     )
                                                   else if (progEx.type == ExerciseType.distance)
@@ -862,9 +913,22 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        "Sélectionner des exercices",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Sélectionner des exercices",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 24),
+                            tooltip: "Créer un exercice",
+                            onPressed: () {
+                              final provider = Provider.of<WorkoutProvider>(context, listen: false);
+                              _showCreateExerciseDialog(context, provider, setModalState);
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -972,6 +1036,124 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
               },
             );
           },
+        );
+      },
+    );
+  }
+
+
+  void _showCreateExerciseDialog(BuildContext context, WorkoutProvider provider, StateSetter setModalState) {
+    final formKey = GlobalKey<FormState>();
+    String name = '';
+    String category = 'Pectoraux';
+    String notes = '';
+    String videoUrl = '';
+
+    final categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio', 'Autre'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Créer un nouvel exercice"),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: "Nom de l'exercice",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
+                    onSaved: (val) => name = val!.trim(),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: category,
+                    decoration: const InputDecoration(
+                      labelText: "Catégorie",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: categories.map((cat) {
+                      return DropdownMenuItem(value: cat, child: Text(cat));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) category = val;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: "Notes / Description (optionnel)",
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                    onSaved: (val) => notes = val?.trim() ?? '',
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: "Lien vidéo YouTube (optionnel)",
+                      hintText: "https://www.youtube.com/watch?v=...",
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.video_library_outlined),
+                    ),
+                    onSaved: (val) => videoUrl = val?.trim() ?? '',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Annuler"),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+            ElevatedButton(
+              child: const Text("Créer & Sélectionner"),
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  formKey.currentState!.save();
+                  final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
+                  final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
+
+                  await provider.createCustomExercise(
+                    name,
+                    category,
+                    notes: cleanNotes,
+                    videoUrl: cleanVideoUrl,
+                  );
+
+                  final newEx = provider.exercises.lastWhere(
+                    (e) => e.name == name && e.category == category,
+                    orElse: () => provider.exercises.last,
+                  );
+
+                  if (!_selectedExercises.any((e) => e.exerciseId == newEx.id)) {
+                    setState(() {
+                      _selectedExercises.add(
+                        ProgramExercise(
+                          exerciseId: newEx.id,
+                          type: ExerciseType.reps,
+                          setsCount: 3,
+                          repsCount: 10,
+                          restTime: 90,
+                          durationTarget: 0,
+                          distanceTarget: 0.0,
+                        ),
+                      );
+                    });
+                    setModalState(() {});
+                  }
+
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+            ),
+          ],
         );
       },
     );
