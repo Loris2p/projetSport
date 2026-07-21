@@ -1,4 +1,4 @@
-# SportApp 🏋️‍♂️
+# SportiLife 🏋️‍♂️
 
 Une application Flutter moderne pour suivre vos entraînements de musculation, planifier vos séances et enregistrer votre historique de performances.
 

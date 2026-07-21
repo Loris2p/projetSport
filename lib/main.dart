@@ -78,7 +78,7 @@ class SportApp extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return MaterialApp(
-      title: 'SportApp',
+      title: 'SportiLife',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: authProvider.isAuthenticated
