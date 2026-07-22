@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
@@ -82,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
 
     if (success && mounted) {
+      TextInput.finishAutofillContext();
       final userId = authProvider.currentUser?.uid;
       final workoutProvider = context.read<WorkoutProvider>();
       final messenger = ScaffoldMessenger.of(context);
@@ -121,7 +123,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               padding: const EdgeInsets.symmetric(horizontal: 28.0),
               child: Form(
                 key: _formKey,
-                child: Column(
+                child: AutofillGroup(
+                  child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -242,6 +245,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             if (!_isLoginMode) ...[
                               TextFormField(
                                 controller: _nameController,
+                                keyboardType: TextInputType.name,
+                                autofillHints: const [AutofillHints.name],
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(
                                   labelText: "Nom complet",
@@ -261,6 +266,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              autofillHints: const [AutofillHints.email, AutofillHints.username],
                               style: const TextStyle(color: Colors.white),
                               decoration: _inputDecoration(
                                 labelText: "Adresse email",
@@ -282,6 +288,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              keyboardType: TextInputType.visiblePassword,
+                              autofillHints: _isLoginMode
+                                  ? const [AutofillHints.password]
+                                  : const [AutofillHints.newPassword],
                               style: const TextStyle(color: Colors.white),
                               decoration: _inputDecoration(
                                 labelText: "Mot de passe",
@@ -376,6 +386,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ],
                 ),
               ),
+            ),
             ),
           ),
         ),
