@@ -3,12 +3,14 @@ class UserProfile {
   final String email;
   final String displayName;
   final bool isAdmin;
+  final bool showAds;
 
   UserProfile({
     required this.uid,
     required this.email,
     required this.displayName,
     this.isAdmin = false,
+    this.showAds = true,
   });
 
   Map<String, dynamic> toJson() {
@@ -17,6 +19,7 @@ class UserProfile {
       'email': email,
       'displayName': displayName,
       'isAdmin': isAdmin,
+      'showAds': showAds,
     };
   }
 
@@ -26,6 +29,8 @@ class UserProfile {
       email: json['email'] as String,
       displayName: json['displayName'] as String,
       isAdmin: json['isAdmin'] as bool? ?? false,
+      showAds: json['showAds'] as bool? ?? true,
     );
   }
 }
+

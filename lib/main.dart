@@ -13,6 +13,7 @@ import 'providers/workout_provider.dart';
 import 'providers/auth_provider.dart';
 import 'repositories/firebase_auth_repository.dart';
 import 'repositories/firestore_workout_repository.dart';
+import 'services/ad_service.dart';
 import 'services/health_sync_service.dart';
 import 'services/prefs_token_store.dart';
 import 'screens/main_shell.dart';
@@ -22,6 +23,8 @@ import 'screens/admin_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await AdService.initialize();
+
   
   // Initialisation hybride Firebase
   if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {

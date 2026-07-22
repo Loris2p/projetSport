@@ -9,6 +9,8 @@ import 'active_session_screen.dart';
 import 'exercises_screen.dart';
 import 'statistics_screen.dart';
 
+import '../widgets/ad_banner_widget.dart';
+
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -106,48 +108,57 @@ class _MainShellState extends State<MainShell> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        // Extra padding to avoid overlapping the floating active workout bar if active
-        padding: EdgeInsets.only(bottom: activeSession != null ? 70.0 : 0.0),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          type: BottomNavigationBarType.fixed,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: "Tableau de bord",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_outlined),
-              activeIcon: Icon(Icons.assignment),
-              label: "Programmes",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history_outlined),
-              activeIcon: Icon(Icons.history),
-              label: "Historique",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.show_chart_outlined),
-              activeIcon: Icon(Icons.show_chart),
-              label: "Stats",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.fitness_center_outlined),
-              activeIcon: Icon(Icons.fitness_center),
-              label: "Exercices",
+      bottomNavigationBar: SafeArea(
+        bottom: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AdBannerWidget(),
+            Container(
+              padding: EdgeInsets.only(bottom: activeSession != null ? 70.0 : 0.0),
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                type: BottomNavigationBarType.fixed,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard_outlined),
+                    activeIcon: Icon(Icons.dashboard),
+                    label: "Tableau de bord",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.assignment_outlined),
+                    activeIcon: Icon(Icons.assignment),
+                    label: "Programmes",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.history_outlined),
+                    activeIcon: Icon(Icons.history),
+                    label: "Historique",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.show_chart_outlined),
+                    activeIcon: Icon(Icons.show_chart),
+                    label: "Stats",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.fitness_center_outlined),
+                    activeIcon: Icon(Icons.fitness_center),
+                    label: "Exercices",
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildActiveWorkoutBar(BuildContext context, WorkoutProvider provider) {
     final session = provider.activeSession!;

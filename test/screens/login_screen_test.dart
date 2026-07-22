@@ -40,7 +40,7 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
-      expect(find.text('PULSE FIT'), findsOneWidget);
+      expect(find.text('SPORTILIFE'), findsOneWidget);
       expect(find.text('Connexion'), findsOneWidget);
       expect(find.text('Adresse email'), findsOneWidget);
       expect(find.text('Mot de passe'), findsOneWidget);

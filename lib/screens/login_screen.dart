@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // App Name
                     const Center(
                       child: Text(
-                        "PULSE FIT",
+                        "SPORTILIFE",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
