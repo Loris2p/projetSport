@@ -160,6 +160,16 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSession(WorkoutSession session) async {
+    await repository.saveSession(session);
+    _history = repository.getHistory();
+    _sessionVolumeCache.remove(session.id);
+    _sessionPRsCache.remove(session.id);
+    _sessionExercisesSummaryCache.remove(session.id);
+    _updateWeeklyStatsAndFlatHistory();
+    notifyListeners();
+  }
+
   Future<void> deleteSession(String id) async {
     await repository.deleteSession(id);
     _history = repository.getHistory();
@@ -420,8 +430,8 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> finishActiveSession() async {
-    if (_activeSession == null) return;
+  Future<WorkoutSession?> finishActiveSession() async {
+    if (_activeSession == null) return null;
 
     final endTime = DateTime.now();
 
@@ -442,7 +452,7 @@ class WorkoutProvider with ChangeNotifier {
     if (completedExercises.isEmpty) {
       // No completed sets, just cancel
       cancelActiveSession();
-      return;
+      return null;
     }
 
     // Load health metrics (average heart rate and calories) for session duration
@@ -498,6 +508,7 @@ class WorkoutProvider with ChangeNotifier {
     stopRestTimer();
     _updateWeeklyStatsAndFlatHistory();
     notifyListeners();
+    return finalSession;
   }
 
   // --- PR Detection Engine ---

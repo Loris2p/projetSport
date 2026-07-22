@@ -12,6 +12,10 @@ class WorkoutSession {
   double? activeCaloriesBurned;
   double? averageHeartRate;
 
+  // Ressenti & Notes
+  int? rating;
+  String? notes;
+
   WorkoutSession({
     required this.id,
     this.programId,
@@ -21,6 +25,8 @@ class WorkoutSession {
     required this.exercises,
     this.activeCaloriesBurned,
     this.averageHeartRate,
+    this.rating,
+    this.notes,
   });
 
   Map<String, dynamic> toJson() {
@@ -33,6 +39,8 @@ class WorkoutSession {
       'exercises': exercises.map((e) => e.toJson()).toList(),
       'activeCaloriesBurned': activeCaloriesBurned,
       'averageHeartRate': averageHeartRate,
+      'rating': rating,
+      'notes': notes,
     };
   }
 
@@ -48,6 +56,8 @@ class WorkoutSession {
           .toList(),
       activeCaloriesBurned: (json['activeCaloriesBurned'] as num?)?.toDouble(),
       averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
+      rating: json['rating'] as int?,
+      notes: json['notes'] as String?,
     );
   }
 }

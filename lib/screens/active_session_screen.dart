@@ -6,6 +6,7 @@ import '../models/performed_exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
+import 'workout_summary_screen.dart';
 
 class ActiveSessionScreen extends StatelessWidget {
   const ActiveSessionScreen({super.key});
@@ -943,20 +944,26 @@ class ActiveSessionScreen extends StatelessWidget {
     );
 
     // Save session
-    await provider.finishActiveSession();
+    final completedSession = await provider.finishActiveSession();
 
     if (!context.mounted) return;
 
-    // Close loader and return to Home
+    // Close loader
     Navigator.pop(context); // pop loader
-    Navigator.pop(context); // pop active session screen
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Félicitations ! Séance enregistrée avec succès."),
-        backgroundColor: Colors.green,
-      ),
-    );
+    if (completedSession != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkoutSummaryScreen(
+            session: completedSession,
+            isNewCompletion: true,
+          ),
+        ),
+      );
+    } else {
+      Navigator.pop(context); // pop active session screen
+    }
   }
 
   Color _getGroupColor(String groupId) {

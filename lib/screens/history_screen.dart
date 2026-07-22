@@ -5,6 +5,7 @@ import '../models/exercise.dart';
 import '../models/workout_session.dart';
 import '../models/exercise_set.dart';
 import '../providers/workout_provider.dart';
+import 'workout_summary_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -100,7 +101,7 @@ class HistoryScreen extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => SessionDetailScreen(session: session),
+              builder: (_) => WorkoutSummaryScreen(session: session),
             ),
           );
         },
