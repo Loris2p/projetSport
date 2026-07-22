@@ -5,7 +5,9 @@ import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
+import '../widgets/set_numeric_input.dart';
 import '../widgets/youtube_player_dialog.dart';
+import 'exercise_focus_screen.dart';
 import 'workout_summary_screen.dart';
 
 class ActiveSessionScreen extends StatelessWidget {
@@ -81,6 +83,58 @@ class ActiveSessionScreen extends StatelessWidget {
         ),
         body: Column(
           children: [
+            if (session.exercises.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xff2563eb).withValues(alpha: 0.2),
+                      const Color(0xff1d4ed8).withValues(alpha: 0.05),
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xff2563eb).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.center_focus_strong, color: Color(0xff60a5fa), size: 26),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Mode Focus Exercice", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text("Exercice par exercice avec swipe & navigation", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        int firstIncomplete = session.exercises.indexWhere((e) => e.sets.any((s) => !s.isCompleted));
+                        if (firstIncomplete == -1) firstIncomplete = 0;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ExerciseFocusScreen(initialIndex: firstIncomplete),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff2563eb),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.play_arrow, size: 16),
+                      label: const Text("Aller à l'exercice", style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+
             // Exercise List
             Expanded(
               child: session.exercises.isEmpty
@@ -110,7 +164,7 @@ class ActiveSessionScreen extends StatelessWidget {
                           (e) => e.id == perfEx.exerciseId,
                           orElse: () => Exercise(id: perfEx.exerciseId, name: "Exercice Supprimé", category: "Inconnue"),
                         );
-                        return _buildExerciseCard(context, perfEx, exercise, provider);
+                        return _buildExerciseCard(context, perfEx, exercise, provider, index);
                       },
                     ),
             ),
@@ -135,6 +189,7 @@ class ActiveSessionScreen extends StatelessWidget {
     PerformedExercise perfEx,
     Exercise exercise,
     WorkoutProvider provider,
+    int index,
   ) {
     final hasGroup = perfEx.groupId != null && perfEx.groupId!.isNotEmpty;
     final groupColor = hasGroup ? _getGroupColor(perfEx.groupId!) : null;
@@ -210,6 +265,18 @@ class ActiveSessionScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.center_focus_strong, color: Color(0xff60a5fa), size: 24),
+                          tooltip: "Mode Focus (Aller à cet exercice)",
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ExerciseFocusScreen(initialIndex: index),
+                              ),
+                            );
+                          },
+                        ),
                         if (exercise.videoUrl != null && exercise.videoUrl!.trim().isNotEmpty)
                           IconButton(
                             icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 28),
@@ -219,7 +286,14 @@ class ActiveSessionScreen extends StatelessWidget {
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.more_vert, color: Colors.grey),
                           onSelected: (value) {
-                            if (value == 'delete') {
+                            if (value == 'focus') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ExerciseFocusScreen(initialIndex: index),
+                                ),
+                              );
+                            } else if (value == 'delete') {
                               provider.removeExerciseFromActiveSession(perfEx.exerciseId);
                             } else if (value == 'notes') {
                               _showNotesDialog(context, perfEx, provider);
@@ -232,6 +306,16 @@ class ActiveSessionScreen extends StatelessWidget {
                             }
                           },
                           itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'focus',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.center_focus_strong, color: Color(0xff60a5fa), size: 20),
+                                  SizedBox(width: 8),
+                                  Text("Aller à cet exercice (Focus)"),
+                                ],
+                              ),
+                            ),
                             if (exercise.videoUrl != null && exercise.videoUrl!.trim().isNotEmpty)
                               const PopupMenuItem(
                                 value: 'video',
@@ -389,15 +473,6 @@ class ActiveSessionScreen extends StatelessWidget {
   ) {
     final bool isCompleted = set.isCompleted;
 
-    String formatDuration(int seconds) {
-      final m = seconds ~/ 60;
-      final s = seconds % 60;
-      if (m > 0) {
-        return "$m:${s.toString().padLeft(2, '0')}";
-      }
-      return "${s}s";
-    }
-
     // Determine background color based on completion state
     final Color rowBg = isCompleted ? const Color(0xff142f23) : Colors.transparent;
 
@@ -448,133 +523,49 @@ class ActiveSessionScreen extends StatelessWidget {
           // Weight/Resistance/Distance Column (Column 2)
           Expanded(
             flex: 3,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (perfEx.type == ExerciseType.distance) ...[
-                  // Distance controller
-                  _buildIncrementButton(
-                    icon: Icons.remove,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.distance - 0.1).clamp(0.0, 100.0);
-                      provider.updateSetMetrics(set, set.weight, set.reps, distance: newVal);
+            child: perfEx.type == ExerciseType.distance
+                ? SetNumericInput(
+                    initialValue: set.distance,
+                    suffix: "km",
+                    isDecimal: true,
+                    enabled: !isCompleted,
+                    onChanged: (val) {
+                      provider.updateSetMetrics(set, set.weight, set.reps, distance: val);
+                    },
+                  )
+                : SetNumericInput(
+                    initialValue: set.weight,
+                    suffix: perfEx.type == ExerciseType.time ? "lvl" : "kg",
+                    isDecimal: true,
+                    enabled: !isCompleted,
+                    onChanged: (val) {
+                      provider.updateSetMetrics(set, val, set.reps);
                     },
                   ),
-                  Expanded(
-                    child: Text(
-                      "${set.distance.toStringAsFixed(1)} km",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isCompleted ? Colors.grey[400] : Colors.white,
-                      ),
-                    ),
-                  ),
-                  _buildIncrementButton(
-                    icon: Icons.add,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.distance + 0.1).clamp(0.0, 100.0);
-                      provider.updateSetMetrics(set, set.weight, set.reps, distance: newVal);
-                    },
-                  ),
-                ] else ...[
-                  // Weight/Resistance controller (for reps & time)
-                  _buildIncrementButton(
-                    icon: Icons.remove,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.weight - 2.5).clamp(0.0, 500.0);
-                      provider.updateSetMetrics(set, newVal, set.reps);
-                    },
-                  ),
-                  Expanded(
-                    child: Text(
-                      perfEx.type == ExerciseType.time 
-                          ? "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} lvl"
-                          : "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isCompleted ? Colors.grey[400] : Colors.white,
-                      ),
-                    ),
-                  ),
-                  _buildIncrementButton(
-                    icon: Icons.add,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.weight + 2.5).clamp(0.0, 500.0);
-                      provider.updateSetMetrics(set, newVal, set.reps);
-                    },
-                  ),
-                ],
-              ],
-            ),
           ),
 
           // Reps/Duration Column (Column 3)
           Expanded(
             flex: 3,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (perfEx.type == ExerciseType.reps) ...[
-                  // Reps controller
-                  _buildIncrementButton(
-                    icon: Icons.remove,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.reps - 1).clamp(0, 100);
-                      provider.updateSetMetrics(set, set.weight, newVal);
+            child: perfEx.type == ExerciseType.reps
+                ? SetNumericInput(
+                    initialValue: set.reps.toDouble(),
+                    suffix: "",
+                    isDecimal: false,
+                    enabled: !isCompleted,
+                    onChanged: (val) {
+                      provider.updateSetMetrics(set, set.weight, val.toInt());
+                    },
+                  )
+                : SetNumericInput(
+                    initialValue: set.duration.toDouble(),
+                    suffix: "s",
+                    isDecimal: false,
+                    enabled: !isCompleted,
+                    onChanged: (val) {
+                      provider.updateSetMetrics(set, set.weight, set.reps, duration: val.toInt());
                     },
                   ),
-                  Expanded(
-                    child: Text(
-                      "${set.reps}",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isCompleted ? Colors.grey[400] : Colors.white,
-                      ),
-                    ),
-                  ),
-                  _buildIncrementButton(
-                    icon: Icons.add,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.reps + 1).clamp(0, 100);
-                      provider.updateSetMetrics(set, set.weight, newVal);
-                    },
-                  ),
-                ] else ...[
-                  // Duration controller (for time & distance)
-                  _buildIncrementButton(
-                    icon: Icons.remove,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.duration - 5).clamp(0, 3600);
-                      provider.updateSetMetrics(set, set.weight, set.reps, duration: newVal);
-                    },
-                  ),
-                  Expanded(
-                    child: Text(
-                      formatDuration(set.duration),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isCompleted ? Colors.grey[400] : Colors.white,
-                      ),
-                    ),
-                  ),
-                  _buildIncrementButton(
-                    icon: Icons.add,
-                    onPressed: isCompleted ? null : () {
-                      final newVal = (set.duration + 5).clamp(0, 3600);
-                      provider.updateSetMetrics(set, set.weight, set.reps, duration: newVal);
-                    },
-                  ),
-                ],
-              ],
-            ),
           ),
 
           // Check OK / PR Indicator
@@ -617,24 +608,6 @@ class ActiveSessionScreen extends StatelessWidget {
             ),
           ]
         ],
-      ),
-    );
-  }
-
-  Widget _buildIncrementButton({required IconData icon, required VoidCallback? onPressed}) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xff2d2d34)),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(icon, size: 14, color: onPressed == null ? Colors.grey[700] : Colors.white),
-        ),
       ),
     );
   }
