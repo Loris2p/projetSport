@@ -5,6 +5,7 @@ import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
+import '../widgets/rest_timer_overlay.dart';
 import '../widgets/set_numeric_input.dart';
 import '../widgets/youtube_player_dialog.dart';
 import 'exercise_focus_screen.dart';
@@ -170,8 +171,8 @@ class ActiveSessionScreen extends StatelessWidget {
             ),
           ],
         ),
-        // Rest Timer banner at the bottom
-        bottomSheet: provider.isRestTimerActive ? _buildRestTimerSheet(context, provider) : null,
+        // Rest Timer overlay at the bottom
+        bottomSheet: provider.isRestTimerActive ? const RestTimerOverlay() : null,
         floatingActionButton: !provider.isRestTimerActive && session.exercises.isNotEmpty
             ? FloatingActionButton.extended(
                 backgroundColor: const Color(0xff2563eb),
@@ -609,78 +610,6 @@ class ActiveSessionScreen extends StatelessWidget {
           ]
         ],
       ),
-    );
-  }
-
-  Widget _buildRestTimerSheet(BuildContext context, WorkoutProvider provider) {
-    final total = provider.restTimerDuration;
-
-    return ValueListenableBuilder<int>(
-      valueListenable: provider.restTimerRemainingNotifier,
-      builder: (context, remaining, _) {
-        final progress = total > 0 ? remaining / total : 0.0;
-        return Container(
-          height: 70,
-          decoration: const BoxDecoration(
-            color: Color(0xff1e1e24),
-            border: Border(
-              top: BorderSide(color: Color(0xff2d2d34), width: 1.5),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              const Icon(Icons.timer, color: Color(0xff2563eb)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Temps de récupération...",
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          "$remaining s",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xff2563eb)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: const Color(0xff2d2d34),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xff2563eb)),
-                        minHeight: 6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                icon: const Icon(Icons.add, size: 20),
-                onPressed: () {
-                  // Add 15s to rest timer
-                  provider.startRestTimer(remaining + 15);
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next, size: 20, color: Colors.grey),
-                onPressed: () {
-                  provider.stopRestTimer();
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
