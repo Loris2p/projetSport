@@ -5,8 +5,19 @@ void main() {
   group('ExerciseType Model Tests', () {
     test('Should parse ExerciseType correctly from string values', () {
       expect(ExerciseType.fromString('reps'), equals(ExerciseType.reps));
-      expect(ExerciseType.fromString('time'), equals(ExerciseType.time));
-      expect(ExerciseType.fromString('distance'), equals(ExerciseType.distance));
+      expect(ExerciseType.fromString('isometry'), equals(ExerciseType.isometry));
+      expect(ExerciseType.fromString('cardio'), equals(ExerciseType.cardio));
+      expect(ExerciseType.fromString('intervals'), equals(ExerciseType.intervals));
+      expect(ExerciseType.fromString('amrap'), equals(ExerciseType.amrap));
+      expect(ExerciseType.fromString('emom'), equals(ExerciseType.emom));
+      expect(ExerciseType.fromString('forTime'), equals(ExerciseType.forTime));
+      expect(ExerciseType.fromString('video'), equals(ExerciseType.video));
+      expect(ExerciseType.fromString('tempo'), equals(ExerciseType.tempo));
+      expect(ExerciseType.fromString('circuit'), equals(ExerciseType.circuit));
+
+      // Test fallback for legacy terms
+      expect(ExerciseType.fromString('time'), equals(ExerciseType.isometry));
+      expect(ExerciseType.fromString('distance'), equals(ExerciseType.cardio));
     });
 
     test('Should fallback to ExerciseType.reps when string is null or invalid', () {
@@ -19,11 +30,12 @@ void main() {
       expect(ExerciseType.reps.label, contains('Répétitions'));
       expect(ExerciseType.reps.headers, contains('POIDS (KG)'));
 
-      expect(ExerciseType.time.label, contains('Temps'));
-      expect(ExerciseType.time.headers, contains('TEMPS'));
+      expect(ExerciseType.isometry.label, contains('Isométrie'));
+      expect(ExerciseType.isometry.headers, contains('DURÉE'));
 
-      expect(ExerciseType.distance.label, contains('Distance'));
-      expect(ExerciseType.distance.headers, contains('DISTANCE (KM)'));
+      expect(ExerciseType.cardio.label, contains('Cardio'));
+      expect(ExerciseType.cardio.headers, contains('DISTANCE (KM)'));
     });
   });
 }
+

@@ -193,7 +193,7 @@ void main() {
         expect(provider.activeSession?.exercises.first.exerciseId, equals('ex_2'));
       });
 
-      test('addSetToPerformedExercise() should copy metrics from previous set', () async {
+      test('addSetToPerformedExercise() should initialize new set with 0 metrics', () async {
         await provider.init();
         provider.startSession(null);
         final ex = Exercise(id: 'ex_1', name: 'Ex 1', categories: ['Pectoraux']);
@@ -204,9 +204,10 @@ void main() {
 
         provider.addSetToPerformedExercise(perfEx);
         expect(perfEx.sets.length, equals(2));
-        expect(perfEx.sets.last.weight, equals(100.0));
-        expect(perfEx.sets.last.reps, equals(10));
+        expect(perfEx.sets.last.weight, equals(0.0));
+        expect(perfEx.sets.last.reps, equals(0));
       });
+
 
       test('removeSetFromPerformedExercise()', () async {
         await provider.init();

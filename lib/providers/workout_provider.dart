@@ -189,7 +189,7 @@ class WorkoutProvider with ChangeNotifier {
 
     if (program != null) {
       for (var exercise in program.exercises) {
-        final String? exerciseGroupId = program.exerciseGroups?[exercise.exerciseId];
+        final String? exerciseGroupId = exercise.groupId ?? program.exerciseGroups?[exercise.exerciseId];
         exercises.add(
           PerformedExercise(
             exerciseId: exercise.exerciseId,
@@ -203,6 +203,9 @@ class WorkoutProvider with ChangeNotifier {
                 reps: exercise.repsCount,
                 duration: exercise.durationTarget,
                 distance: exercise.distanceTarget,
+                tempo: exercise.tempoCode,
+                workTime: exercise.workTime,
+                intervalRest: exercise.intervalRestTime,
               ),
             ),
           ),
@@ -296,29 +299,33 @@ class WorkoutProvider with ChangeNotifier {
     if (_activeSession == null) return;
     final index = _activeSession!.exercises.indexOf(perfEx);
     if (index >= 0) {
-      // Copy weight/reps from previous set if possible
-      double defaultWeight = 0.0;
-      int defaultReps = 0;
+      String defaultTempo = '2010';
       SetType defaultType = SetType.normal;
 
       if (perfEx.sets.isNotEmpty) {
         final last = perfEx.sets.last;
-        defaultWeight = last.weight;
-        defaultReps = last.reps;
+        defaultTempo = last.tempo;
         defaultType = last.type;
       }
 
       perfEx.sets.add(
         ExerciseSet(
           id: _uuid.v4(),
-          weight: defaultWeight,
-          reps: defaultReps,
+          weight: 0.0,
+          reps: 0,
+          duration: 0,
+          distance: 0.0,
+          tempo: defaultTempo,
+          workTime: 0,
+          intervalRest: 0,
           type: defaultType,
         ),
       );
       notifyListeners();
     }
   }
+
+
 
   void removeSetFromPerformedExercise(PerformedExercise perfEx, String setId) {
     if (_activeSession == null) return;

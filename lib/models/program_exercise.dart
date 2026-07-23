@@ -5,9 +5,14 @@ class ProgramExercise {
   final ExerciseType type;
   final int setsCount;
   final int repsCount;
-  final int restTime; // Temps de repos en secondes
-  final int durationTarget; // Temps cible en secondes (pour les exercices de type temps)
-  final double distanceTarget; // Distance cible en km (pour les exercices de type distance)
+  final int restTime; // Temps de repos principal en secondes
+  final int durationTarget; // Temps cible en secondes (isométrie, cours vidéo, cardio)
+  final double distanceTarget; // Distance cible en km (cardio)
+  final int workTime; // Temps d'effort en secondes (fractionné)
+  final int intervalRestTime; // Temps de repos inter-intervalle en secondes (fractionné)
+  final String tempoCode; // Code tempo ex: "3010"
+  final String? videoUrl; // Lien vidéo spécifique pour cours vidéo
+  final String? groupId; // ID de groupe pour superset/circuit
 
   ProgramExercise({
     required this.exerciseId,
@@ -17,6 +22,11 @@ class ProgramExercise {
     required this.restTime,
     this.durationTarget = 0,
     this.distanceTarget = 0.0,
+    this.workTime = 0,
+    this.intervalRestTime = 0,
+    this.tempoCode = '2010',
+    this.videoUrl,
+    this.groupId,
   });
 
   Map<String, dynamic> toJson() {
@@ -28,6 +38,11 @@ class ProgramExercise {
       'restTime': restTime,
       'durationTarget': durationTarget,
       'distanceTarget': distanceTarget,
+      'workTime': workTime,
+      'intervalRestTime': intervalRestTime,
+      'tempoCode': tempoCode,
+      'videoUrl': videoUrl,
+      'groupId': groupId,
     };
   }
 
@@ -35,12 +50,18 @@ class ProgramExercise {
     return ProgramExercise(
       exerciseId: json['exerciseId'] as String,
       type: ExerciseType.fromString(json['type'] as String?),
-      setsCount: json['setsCount'] as int,
-      repsCount: json['repsCount'] as int,
-      restTime: json['restTime'] as int,
+      setsCount: json['setsCount'] as int? ?? 1,
+      repsCount: json['repsCount'] as int? ?? 0,
+      restTime: json['restTime'] as int? ?? 60,
       durationTarget: json['durationTarget'] as int? ?? 0,
       distanceTarget: (json['distanceTarget'] as num?)?.toDouble() ?? 0.0,
+      workTime: json['workTime'] as int? ?? 0,
+      intervalRestTime: json['intervalRestTime'] as int? ?? 0,
+      tempoCode: json['tempoCode'] as String? ?? '2010',
+      videoUrl: json['videoUrl'] as String?,
+      groupId: json['groupId'] as String?,
     );
   }
 }
+
 

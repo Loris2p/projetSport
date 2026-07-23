@@ -25,7 +25,8 @@ void main() {
     test('Should serialize to JSON and restore via fromJson (Roundtrip)', () {
       final original = ProgramExercise(
         exerciseId: 'ex_run',
-        type: ExerciseType.distance,
+        type: ExerciseType.cardio,
+
         setsCount: 1,
         repsCount: 1,
         restTime: 180,
@@ -35,7 +36,8 @@ void main() {
 
       final json = original.toJson();
       expect(json['exerciseId'], equals('ex_run'));
-      expect(json['type'], equals('distance'));
+      expect(json['type'], equals('cardio'));
+
       expect(json['setsCount'], equals(1));
       expect(json['repsCount'], equals(1));
       expect(json['restTime'], equals(180));

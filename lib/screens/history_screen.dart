@@ -463,13 +463,22 @@ class SessionDetailScreen extends StatelessWidget {
                                   }
 
                                   String metricsText = '';
-                                  if (perfEx.type == ExerciseType.distance) {
+                                  if (perfEx.type == ExerciseType.cardio) {
                                     metricsText = "${set.distance.toStringAsFixed(1)} km en ${formatDuration(set.duration)}";
-                                  } else if (perfEx.type == ExerciseType.time) {
-                                    metricsText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} lvl x ${formatDuration(set.duration)}";
+                                  } else if (perfEx.type == ExerciseType.isometry) {
+                                    metricsText = "${set.weight > 0 ? '${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ' : ''}${formatDuration(set.duration)}";
+                                  } else if (perfEx.type == ExerciseType.intervals) {
+                                    metricsText = "${set.workTime}s effort / ${set.intervalRest}s repos";
+                                  } else if (perfEx.type == ExerciseType.amrap || perfEx.type == ExerciseType.forTime) {
+                                    metricsText = "${set.reps} reps en ${formatDuration(set.duration)}";
+                                  } else if (perfEx.type == ExerciseType.emom) {
+                                    metricsText = "${set.reps} reps";
+                                  } else if (perfEx.type == ExerciseType.tempo) {
+                                    metricsText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps} (Tempo ${set.tempo})";
                                   } else {
                                     metricsText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ${set.reps}";
                                   }
+
 
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 4.0),

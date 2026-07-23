@@ -23,7 +23,8 @@ void main() {
     test('Should serialize to JSON and restore via fromJson (Roundtrip)', () {
       final original = PerformedExercise(
         exerciseId: 'ex_superset',
-        type: ExerciseType.time,
+        type: ExerciseType.isometry,
+
         sets: [
           ExerciseSet(id: 's1', duration: 60, isCompleted: true),
           ExerciseSet(id: 's2', duration: 45, isCompleted: false),
@@ -34,7 +35,8 @@ void main() {
 
       final json = original.toJson();
       expect(json['exerciseId'], equals('ex_superset'));
-      expect(json['type'], equals('time'));
+      expect(json['type'], equals('isometry'));
+
       expect(json['notes'], equals('Garder le dos droit'));
       expect(json['groupId'], equals('group_A'));
       expect((json['sets'] as List).length, equals(2));

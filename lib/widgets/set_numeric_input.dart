@@ -33,6 +33,7 @@ class _SetNumericInputState extends State<SetNumericInput> {
   }
 
   String _formatValue(double val) {
+    if (val == 0) return '';
     if (!widget.isDecimal) {
       return val.toInt().toString();
     }
@@ -41,6 +42,7 @@ class _SetNumericInputState extends State<SetNumericInput> {
     }
     return val.toStringAsFixed(1);
   }
+
 
   void _onFocusChange() {
     if (!_focusNode.hasFocus) {
@@ -87,47 +89,58 @@ class _SetNumericInputState extends State<SetNumericInput> {
           width: _focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
-      child: Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 32, maxWidth: 54),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                enabled: widget.enabled,
-                keyboardType: TextInputType.numberWithOptions(
-                  decimal: widget.isDecimal,
-                  signed: false,
+            Flexible(
+              flex: 3,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 20, maxWidth: 46),
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  enabled: widget.enabled,
+                  keyboardType: TextInputType.numberWithOptions(
+                    decimal: widget.isDecimal,
+                    signed: false,
+                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: widget.enabled ? Colors.white : Colors.grey[500],
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+                    border: InputBorder.none,
+                    hintText: '-',
+                    hintStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+
+                  onChanged: (val) {
+                    final parsed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+                    widget.onChanged(parsed);
+                  },
                 ),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: widget.enabled ? Colors.white : Colors.grey[500],
-                ),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                  border: InputBorder.none,
-                ),
-                onChanged: (val) {
-                  final parsed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
-                  widget.onChanged(parsed);
-                },
               ),
             ),
             if (widget.suffix.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(right: 6.0),
-                child: Text(
-                  widget.suffix,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: widget.enabled ? Colors.grey[400] : Colors.grey[600],
+              const SizedBox(width: 2),
+              Flexible(
+                flex: 2,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    widget.suffix,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: widget.enabled ? Colors.grey[300] : Colors.grey[600],
+                    ),
                   ),
                 ),
               ),
@@ -135,6 +148,7 @@ class _SetNumericInputState extends State<SetNumericInput> {
           ],
         ),
       ),
+
     );
   }
 }

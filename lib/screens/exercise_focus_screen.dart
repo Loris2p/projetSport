@@ -498,21 +498,28 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
                 Expanded(
                   flex: 3,
                   child: Center(
-                    child: Text(
-                      perfEx.type.headers[1],
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        perfEx.type.headers[1],
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
                 Expanded(
                   flex: 3,
                   child: Center(
-                    child: Text(
-                      perfEx.type.headers[2],
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        perfEx.type.headers[2],
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
+
                 SizedBox(
                   width: 45,
                   child: Center(
@@ -530,7 +537,7 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
             ...perfEx.sets.asMap().entries.map((entry) {
               final idx = entry.key;
               final set = entry.value;
-              return _buildSetRow(context, perfEx, set, idx, provider);
+              return _buildSetRow(context, perfEx, exercise, set, idx, provider);
             }),
 
             const SizedBox(height: 12),
@@ -555,6 +562,7 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
   Widget _buildSetRow(
     BuildContext context,
     PerformedExercise perfEx,
+    Exercise exercise,
     ExerciseSet set,
     int index,
     WorkoutProvider provider,
@@ -607,53 +615,17 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
             ),
           ),
 
-          // Weight/Resistance/Distance Column
+          // Switch variables based on exercise type
           Expanded(
             flex: 3,
-            child: perfEx.type == ExerciseType.distance
-                ? SetNumericInput(
-                    initialValue: set.distance,
-                    suffix: "km",
-                    isDecimal: true,
-                    enabled: !isCompleted,
-                    onChanged: (val) {
-                      provider.updateSetMetrics(set, set.weight, set.reps, distance: val);
-                    },
-                  )
-                : SetNumericInput(
-                    initialValue: set.weight,
-                    suffix: perfEx.type == ExerciseType.time ? "lvl" : "kg",
-                    isDecimal: true,
-                    enabled: !isCompleted,
-                    onChanged: (val) {
-                      provider.updateSetMetrics(set, val, set.reps);
-                    },
-                  ),
+            child: _buildSetCol1(context, perfEx, exercise, set, isCompleted, provider),
           ),
 
-          // Reps/Duration Column
           Expanded(
             flex: 3,
-            child: perfEx.type == ExerciseType.reps
-                ? SetNumericInput(
-                    initialValue: set.reps.toDouble(),
-                    suffix: "",
-                    isDecimal: false,
-                    enabled: !isCompleted,
-                    onChanged: (val) {
-                      provider.updateSetMetrics(set, set.weight, val.toInt());
-                    },
-                  )
-                : SetNumericInput(
-                    initialValue: set.duration.toDouble(),
-                    suffix: "s",
-                    isDecimal: false,
-                    enabled: !isCompleted,
-                    onChanged: (val) {
-                      provider.updateSetMetrics(set, set.weight, set.reps, duration: val.toInt());
-                    },
-                  ),
+            child: _buildSetCol2(context, perfEx, exercise, set, isCompleted, provider),
           ),
+
 
           // Check OK / PR Indicator
           SizedBox(
@@ -758,7 +730,170 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
     );
   }
 
+  Widget _buildSetCol1(
+    BuildContext context,
+    PerformedExercise perfEx,
+    Exercise exercise,
+    ExerciseSet set,
+    bool isCompleted,
+    WorkoutProvider provider,
+  ) {
+
+    switch (perfEx.type) {
+      case ExerciseType.reps:
+      case ExerciseType.isometry:
+      case ExerciseType.tempo:
+      case ExerciseType.circuit:
+        return SetNumericInput(
+          initialValue: set.weight,
+          suffix: "kg",
+          isDecimal: true,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, val, set.reps);
+          },
+        );
+
+      case ExerciseType.cardio:
+        return SetNumericInput(
+          initialValue: set.distance,
+          suffix: "km",
+          isDecimal: true,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, distance: val);
+          },
+        );
+
+      case ExerciseType.intervals:
+        return SetNumericInput(
+          initialValue: (set.workTime > 0 ? set.workTime : 30).toDouble(),
+          suffix: "s eff",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            set.workTime = val.toInt();
+            provider.updateSetMetrics(set, set.weight, set.reps);
+          },
+        );
+
+      case ExerciseType.amrap:
+      case ExerciseType.forTime:
+        return SetNumericInput(
+          initialValue: set.reps.toDouble(),
+          suffix: "reps",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, val.toInt());
+          },
+        );
+
+      case ExerciseType.emom:
+        return Center(
+          child: Text(
+            "${set.reps} cibles",
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[400]),
+          ),
+        );
+
+      case ExerciseType.video:
+        return Center(
+          child: Text(
+            "${set.duration ~/ 60 > 0 ? set.duration ~/ 60 : 20} min",
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        );
+    }
+  }
+
+  Widget _buildSetCol2(
+    BuildContext context,
+    PerformedExercise perfEx,
+    Exercise exercise,
+    ExerciseSet set,
+    bool isCompleted,
+    WorkoutProvider provider,
+  ) {
+    switch (perfEx.type) {
+      case ExerciseType.reps:
+      case ExerciseType.circuit:
+      case ExerciseType.emom:
+      case ExerciseType.tempo:
+        return SetNumericInput(
+          initialValue: set.reps.toDouble(),
+          suffix: "",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, val.toInt());
+          },
+        );
+
+      case ExerciseType.isometry:
+      case ExerciseType.cardio:
+      case ExerciseType.forTime:
+        return SetNumericInput(
+          initialValue: set.duration.toDouble(),
+          suffix: "s",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, duration: val.toInt());
+          },
+        );
+
+      case ExerciseType.intervals:
+        return SetNumericInput(
+          initialValue: (set.intervalRest > 0 ? set.intervalRest : 15).toDouble(),
+          suffix: "s rep",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            set.intervalRest = val.toInt();
+            provider.updateSetMetrics(set, set.weight, set.reps);
+          },
+        );
+
+      case ExerciseType.amrap:
+        return SetNumericInput(
+          initialValue: set.duration.toDouble(),
+          suffix: "s",
+          isDecimal: false,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, duration: val.toInt());
+          },
+        );
+
+      case ExerciseType.video:
+        final String? url = exercise.videoUrl;
+        return Center(
+          child: InkWell(
+            onTap: () {
+              if (url != null && url.isNotEmpty) {
+                YoutubePlayerDialog.show(context, exercise.name, url);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Aucune URL vidéo associée")),
+                );
+              }
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.play_circle_fill, color: Colors.red, size: 20),
+                SizedBox(width: 4),
+                Text("Vidéo", style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
   void _showNotesDialog(BuildContext context, PerformedExercise perfEx, WorkoutProvider provider) {
+
     final controller = TextEditingController(text: perfEx.notes);
     showDialog(
       context: context,

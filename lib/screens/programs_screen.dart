@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
@@ -114,14 +114,8 @@ class ProgramsScreen extends StatelessWidget {
               orElse: () => Exercise(id: progEx.exerciseId, name: "Exercice Supprimé", categories: const ["Autre"]),
             );
 
-            String targetsString = '';
-            if (progEx.type == ExerciseType.reps) {
-              targetsString = "${progEx.setsCount} séries × ${progEx.repsCount} reps";
-            } else if (progEx.type == ExerciseType.time) {
-              targetsString = "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)}";
-            } else if (progEx.type == ExerciseType.distance) {
-              targetsString = "${progEx.setsCount} séries × ${progEx.distanceTarget} km";
-            }
+            String targetsString = _getProgramExerciseSummary(progEx);
+
 
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -474,14 +468,8 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
   ) {
     final groupId = _exerciseGroups[ex.id];
 
-    String targetsText = '';
-    if (progEx.type == ExerciseType.reps) {
-      targetsText = "${progEx.setsCount} séries × ${progEx.repsCount} reps";
-    } else if (progEx.type == ExerciseType.time) {
-      targetsText = "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)}";
-    } else if (progEx.type == ExerciseType.distance) {
-      targetsText = "${progEx.setsCount} séries × ${progEx.distanceTarget} km";
-    }
+    String targetsText = _getProgramExerciseSummary(progEx);
+
 
     return Card(
       key: ValueKey(progEx.exerciseId),
@@ -804,11 +792,17 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     final formKey = GlobalKey<FormState>();
 
     ExerciseType selectedType = initialSettings?.type ?? ExerciseType.reps;
-    int setsCount = initialSettings?.setsCount ?? 3;
-    int repsCount = initialSettings?.repsCount ?? 10;
-    int restTime = initialSettings?.restTime ?? 90;
-    int durationTarget = initialSettings?.durationTarget ?? 0;
-    double distanceTarget = initialSettings?.distanceTarget ?? 5.0;
+
+    int? setsCount = initialSettings?.setsCount;
+    int? repsCount = initialSettings?.repsCount;
+    int? restTime = initialSettings?.restTime;
+    int? durationTarget = initialSettings?.durationTarget;
+    double? distanceTarget = initialSettings?.distanceTarget;
+    int? workTime = initialSettings?.workTime;
+    int? intervalRestTime = initialSettings?.intervalRestTime;
+
+    String tempoCode = initialSettings?.tempoCode ?? '';
+    String videoUrl = initialSettings?.videoUrl ?? ex.videoUrl ?? '';
 
 
     showModalBottomSheet(
@@ -873,214 +867,113 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
 
                       const Divider(height: 24),
 
-                      // Choice Chips for Evaluation Mode (Reps, Duration, Distance)
-                      const Text(
-                        "Mode d'évaluation :",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
+                      // Selector for all 10 Exercise Types
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildDialogChoiceChip(
-                            label: "Répétitions",
-                            icon: Icons.repeat,
-                            isSelected: selectedType == ExerciseType.reps,
-                            onTap: () {
-                              setDialogState(() {
-                                selectedType = ExerciseType.reps;
-                              });
-                            },
+                          const Text(
+                            "Type d'application sur le terrain :",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
-                          const SizedBox(width: 8),
-                          _buildDialogChoiceChip(
-                            label: "Durée (Chrono)",
-                            icon: Icons.timer,
-                            isSelected: selectedType == ExerciseType.time,
-                            onTap: () {
-                              setDialogState(() {
-                                selectedType = ExerciseType.time;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _buildDialogChoiceChip(
-                            label: "Distance",
-                            icon: Icons.straighten,
-                            isSelected: selectedType == ExerciseType.distance,
-                            onTap: () {
-                              setDialogState(() {
-                                selectedType = ExerciseType.distance;
-                              });
-                            },
+                          Text(
+                            selectedType.label,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xff2563eb)),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Horizontal Scrollable Grid of Types
+                      SizedBox(
+                        height: 75,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: ExerciseType.values.length,
+                          itemBuilder: (context, i) {
+                            final type = ExerciseType.values[i];
+                            final isSel = type == selectedType;
+                            return GestureDetector(
+                              onTap: () {
+                                setDialogState(() {
+                                  selectedType = type;
+                                });
+                              },
+                              child: Container(
+                                width: 100,
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isSel
+                                      ? const Color(0xff2563eb).withValues(alpha: 0.25)
+                                      : const Color(0xff22222a),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSel ? const Color(0xff2563eb) : Colors.grey.withValues(alpha: 0.2),
+                                    width: isSel ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(type.icon, size: 20, color: isSel ? const Color(0xff2563eb) : Colors.grey),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      type.label,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                        color: isSel ? Colors.white : Colors.grey[300],
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xff22222a),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          selectedType.description,
+                          style: TextStyle(fontSize: 11, color: Colors.grey[400], fontStyle: FontStyle.italic),
+                        ),
                       ),
 
                       const SizedBox(height: 20),
 
-                      // Form Inputs (Séries, Cible, Repos)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Séries
-                          Expanded(
-                            child: TextFormField(
-                              initialValue: setsCount.toString(),
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: "Séries",
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              validator: (val) {
-                                if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0) {
-                                  return "Min 1";
-                                }
-                                return null;
-                              },
-                              onSaved: (val) => setsCount = int.parse(val!),
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Dynamic Target Field
-                          if (selectedType == ExerciseType.reps)
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: repsCount.toString(),
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: "Répétitions",
-                                  border: OutlineInputBorder(),
-                                  isDense: true,
-                                ),
-                                validator: (val) {
-                                  if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0) {
-                                    return "Min 1";
-                                  }
-                                  return null;
-                                },
-                                onSaved: (val) => repsCount = int.parse(val!),
-                              ),
-                            )
-                          else if (selectedType == ExerciseType.time)
-                            Expanded(
-                              flex: 2,
-                              child: InkWell(
-                                onTap: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    backgroundColor: const Color(0xff18181c),
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                                    ),
-                                    builder: (ctx) {
-                                      return SizedBox(
-                                        height: 260,
-                                        child: Column(
-                                          children: [
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  const Text(
-                                                    "Temps cible",
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(ctx),
-                                                    child: const Text("Valider", style: TextStyle(color: Color(0xff2563eb), fontWeight: FontWeight.bold)),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const Divider(height: 1),
-                                            Expanded(
-                                              child: CupertinoTheme(
-                                                data: const CupertinoThemeData(brightness: Brightness.dark),
-                                                child: CupertinoTimerPicker(
-                                                  mode: CupertinoTimerPickerMode.hms,
-                                                  initialTimerDuration: Duration(seconds: durationTarget),
-                                                  onTimerDurationChanged: (Duration newDuration) {
-                                                    setDialogState(() {
-                                                      durationTarget = newDuration.inSeconds;
-                                                    });
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                    labelText: "Temps cible",
-                                    labelStyle: TextStyle(fontSize: 11, color: Colors.grey),
-                                    border: OutlineInputBorder(),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _formatDuration(durationTarget),
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                                      ),
-                                      const Icon(Icons.timer_outlined, size: 18, color: Color(0xff2563eb)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
-                          else if (selectedType == ExerciseType.distance)
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: distanceTarget.toString(),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(
-                                  labelText: "Distance (km)",
-                                  border: OutlineInputBorder(),
-                                  isDense: true,
-                                ),
-                                validator: (val) {
-                                  if (val == null || val.isEmpty || double.tryParse(val) == null || double.parse(val) <= 0.0) {
-                                    return "Min 0.1";
-                                  }
-                                  return null;
-                                },
-                                onSaved: (val) => distanceTarget = double.parse(val!),
-                              ),
-                            ),
-
-                          const SizedBox(width: 12),
-
-                          // Repos
-                          Expanded(
-                            child: TextFormField(
-                              initialValue: restTime.toString(),
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: "Repos (s)",
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              validator: (val) {
-                                if (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) < 0) {
-                                  return "Min 0";
-                                }
-                                return null;
-                              },
-                              onSaved: (val) => restTime = int.parse(val!),
-                            ),
-                          ),
-                        ],
+                      // Dynamic Fields based on Selected Type
+                      _buildDynamicTargetFields(
+                        context: context,
+                        setDialogState: setDialogState,
+                        type: selectedType,
+                        setsCount: setsCount,
+                        onSetsChanged: (v) => setsCount = v,
+                        repsCount: repsCount,
+                        onRepsChanged: (v) => repsCount = v,
+                        restTime: restTime,
+                        onRestChanged: (v) => restTime = v,
+                        durationTarget: durationTarget,
+                        onDurationChanged: (v) => durationTarget = v,
+                        distanceTarget: distanceTarget,
+                        onDistanceChanged: (v) => distanceTarget = v,
+                        workTime: workTime,
+                        onWorkTimeChanged: (v) => workTime = v,
+                        intervalRestTime: intervalRestTime,
+                        onIntervalRestChanged: (v) => intervalRestTime = v,
+                        tempoCode: tempoCode,
+                        onTempoChanged: (v) => tempoCode = v,
+                        videoUrl: videoUrl,
+                        onVideoUrlChanged: (v) => videoUrl = v,
                       ),
 
                       const SizedBox(height: 24),
@@ -1101,12 +994,17 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                               final result = ProgramExercise(
                                 exerciseId: ex.id,
                                 type: selectedType,
-                                setsCount: setsCount,
-                                repsCount: selectedType == ExerciseType.reps ? repsCount : 0,
-                                restTime: restTime,
-                                durationTarget: selectedType == ExerciseType.time ? durationTarget : 0,
-                                distanceTarget: selectedType == ExerciseType.distance ? distanceTarget : 0.0,
+                                setsCount: setsCount ?? 3,
+                                repsCount: repsCount ?? 10,
+                                restTime: restTime ?? 0,
+                                durationTarget: durationTarget ?? 30,
+                                distanceTarget: distanceTarget ?? 5.0,
+                                workTime: workTime ?? 30,
+                                intervalRestTime: intervalRestTime ?? 0,
+                                tempoCode: tempoCode.isNotEmpty ? tempoCode : '3010',
+                                videoUrl: videoUrl.isNotEmpty ? videoUrl : null,
                               );
+
 
                               onConfirm(result);
                               Navigator.pop(ctx);
@@ -1129,45 +1027,326 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     );
   }
 
-  Widget _buildDialogChoiceChip({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
+  /// Générateur dynamique des champs de formulaire de réglage selon le type d'exercice
+  Widget _buildDynamicTargetFields({
+    required BuildContext context,
+    required StateSetter setDialogState,
+    required ExerciseType type,
+    required int? setsCount,
+    required ValueChanged<int> onSetsChanged,
+    required int? restTime,
+    required ValueChanged<int> onRestChanged,
+    required int? repsCount,
+    required ValueChanged<int> onRepsChanged,
+    required int? durationTarget,
+    required ValueChanged<int> onDurationChanged,
+    required double? distanceTarget,
+    required ValueChanged<double> onDistanceChanged,
+    required int? workTime,
+    required ValueChanged<int> onWorkTimeChanged,
+    required int? intervalRestTime,
+    required ValueChanged<int> onIntervalRestChanged,
+    required String tempoCode,
+    required ValueChanged<String> onTempoChanged,
+    required String videoUrl,
+    required ValueChanged<String> onVideoUrlChanged,
   }) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xff2563eb)
-                : const Color(0xff22222a),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? const Color(0xff2563eb) : Colors.grey.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.white : Colors.grey[300],
-                ),
+    switch (type) {
+      case ExerciseType.reps:
+      case ExerciseType.circuit:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: setsCount != null && setsCount > 0 ? setsCount.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Séries", hintText: "ex: 3", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onSetsChanged(val == null || val.trim().isEmpty ? 3 : (int.tryParse(val.trim()) ?? 3)),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: repsCount != null && repsCount > 0 ? repsCount.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Répétitions", hintText: "ex: 10", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRepsChanged(val == null || val.trim().isEmpty ? 10 : (int.tryParse(val.trim()) ?? 10)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+              ),
+            ),
+          ],
+        );
+
+      case ExerciseType.isometry:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: setsCount != null && setsCount > 0 ? setsCount.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Séries", hintText: "ex: 3", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onSetsChanged(val == null || val.trim().isEmpty ? 3 : (int.tryParse(val.trim()) ?? 3)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                initialValue: durationTarget != null && durationTarget > 0 ? durationTarget.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Durée (s)", hintText: "ex: 30", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 30 : (int.tryParse(val.trim()) ?? 30)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+              ),
+            ),
+          ],
+        );
+
+      case ExerciseType.cardio:
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: distanceTarget != null && distanceTarget > 0 ? distanceTarget.toString() : '',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: "Distance (km)", hintText: "ex: 5.0", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && double.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onDistanceChanged(val == null || val.trim().isEmpty ? 5.0 : (double.tryParse(val.trim()) ?? 5.0)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: durationTarget != null && durationTarget > 0 ? durationTarget.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Durée (s)", hintText: "ex: 1800", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+      case ExerciseType.intervals:
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: setsCount != null && setsCount > 0 ? setsCount.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Tours / Cycles", hintText: "ex: 8", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onSetsChanged(val == null || val.trim().isEmpty ? 8 : (int.tryParse(val.trim()) ?? 8)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: workTime != null && workTime > 0 ? workTime.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Effort (s)", hintText: "ex: 30", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onWorkTimeChanged(val == null || val.trim().isEmpty ? 30 : (int.tryParse(val.trim()) ?? 30)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: intervalRestTime != null && intervalRestTime > 0 ? intervalRestTime.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 15", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onIntervalRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+      case ExerciseType.amrap:
+        return Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                initialValue: durationTarget != null && durationTarget > 0 ? durationTarget.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Chrono max (s)", hintText: "ex: 300 (5 min)", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 300 : (int.tryParse(val.trim()) ?? 300)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+              ),
+            ),
+          ],
+        );
+
+      case ExerciseType.emom:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: durationTarget != null && durationTarget > 0 ? (durationTarget ~/ 60).toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Durée (min)", hintText: "ex: 10", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 600 : ((int.tryParse(val.trim()) ?? 10) * 60)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: repsCount != null && repsCount > 0 ? repsCount.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Reps / min", hintText: "ex: 10", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRepsChanged(val == null || val.trim().isEmpty ? 10 : (int.tryParse(val.trim()) ?? 10)),
+              ),
+            ),
+          ],
+        );
+
+      case ExerciseType.forTime:
+        return Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: repsCount != null && repsCount > 0 ? repsCount.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Reps total", hintText: "ex: 100", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onRepsChanged(val == null || val.trim().isEmpty ? 100 : (int.tryParse(val.trim()) ?? 100)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                initialValue: durationTarget != null && durationTarget > 0 ? durationTarget.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Time Cap (s)", hintText: "ex: 600 (0=Illimité)", border: OutlineInputBorder(), isDense: true),
+                validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+              ),
+            ),
+          ],
+        );
+
+      case ExerciseType.video:
+        return Column(
+          children: [
+            TextFormField(
+              initialValue: durationTarget != null && durationTarget > 0 ? (durationTarget ~/ 60).toString() : '',
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "Durée du cours (min)", hintText: "ex: 20", border: OutlineInputBorder(), isDense: true),
+              validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+              onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 1200 : ((int.tryParse(val.trim()) ?? 20) * 60)),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: videoUrl,
+              decoration: const InputDecoration(labelText: "URL Média / Cours", hintText: "ex: https://youtube.com/...", border: OutlineInputBorder(), isDense: true),
+              onSaved: (val) => onVideoUrlChanged(val?.trim() ?? ''),
+            ),
+          ],
+        );
+
+      case ExerciseType.tempo:
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: setsCount != null && setsCount > 0 ? setsCount.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Séries", hintText: "ex: 4", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onSetsChanged(val == null || val.trim().isEmpty ? 4 : (int.tryParse(val.trim()) ?? 4)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: repsCount != null && repsCount > 0 ? repsCount.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Répétitions", hintText: "ex: 10", border: OutlineInputBorder(), isDense: true),
+                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+                    onSaved: (val) => onRepsChanged(val == null || val.trim().isEmpty ? 10 : (int.tryParse(val.trim()) ?? 10)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: tempoCode,
+                    decoration: const InputDecoration(labelText: "Tempo", hintText: "ex: 3010", border: OutlineInputBorder(), isDense: true),
+                    onSaved: (val) => onTempoChanged(val == null || val.trim().isEmpty ? '3010' : val.trim()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
+              validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
+              onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
+            ),
+          ],
+        );
+    }
   }
+
+
+
+
 
   /// Sélecteur d'exercices modernisé sous forme de BottomSheet avec clic déclenchant le paramétrage immédiat
   void _showAddExerciseBottomSheet(BuildContext context, List<Exercise> allExercises) {
@@ -1549,3 +1728,32 @@ String _formatDuration(int totalSeconds) {
 
   return parts.join(" ");
 }
+
+String _getProgramExerciseSummary(ProgramExercise progEx) {
+  switch (progEx.type) {
+    case ExerciseType.reps:
+      return "${progEx.setsCount} séries × ${progEx.repsCount} reps";
+    case ExerciseType.isometry:
+      return "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)} (Isométrie)";
+    case ExerciseType.cardio:
+      if (progEx.distanceTarget > 0) {
+        return "${progEx.setsCount} séries × ${progEx.distanceTarget} km";
+      }
+      return "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)} (Cardio)";
+    case ExerciseType.intervals:
+      return "${progEx.setsCount} tours (${progEx.workTime}s effort / ${progEx.intervalRestTime}s repos)";
+    case ExerciseType.amrap:
+      return "AMRAP ${_formatDuration(progEx.durationTarget)}";
+    case ExerciseType.emom:
+      return "EMOM ${progEx.durationTarget ~/ 60} min (${progEx.repsCount} reps/min)";
+    case ExerciseType.forTime:
+      return "For Time (${progEx.repsCount} reps, Cap ${_formatDuration(progEx.durationTarget)})";
+    case ExerciseType.video:
+      return "Cours vidéo (${_formatDuration(progEx.durationTarget)})";
+    case ExerciseType.tempo:
+      return "${progEx.setsCount} séries × ${progEx.repsCount} reps (Tempo ${progEx.tempoCode})";
+    case ExerciseType.circuit:
+      return "${progEx.setsCount} séries × ${progEx.repsCount > 0 ? '${progEx.repsCount} reps' : _formatDuration(progEx.durationTarget)} (Circuit)";
+  }
+}
+
