@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/exercise.dart';
 import '../models/exercise_set.dart';
 import '../models/performed_exercise.dart';
@@ -19,6 +20,8 @@ class WorkoutProvider with ChangeNotifier {
   List<Exercise> _exercises = [];
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _history = [];
+  String? _favoriteProgramId;
+  String? _currentUserId;
 
   WorkoutSession? _activeSession;
   bool _isLoading = true;
@@ -56,6 +59,44 @@ class WorkoutProvider with ChangeNotifier {
   List<WorkoutSession> get history => _history;
   WorkoutSession? get activeSession => _activeSession;
   bool get isLoading => _isLoading;
+  String? get favoriteProgramId => _favoriteProgramId;
+
+  WorkoutProgram? get quickProgram {
+    if (_programs.isEmpty) return null;
+    if (_favoriteProgramId != null) {
+      return _programs.firstWhere(
+        (p) => p.id == _favoriteProgramId,
+        orElse: () => _programs.first,
+      );
+    }
+    return _programs.first;
+  }
+
+  Future<void> setFavoriteProgramId(String? programId) async {
+    _favoriteProgramId = programId;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = _currentUserId ?? 'guest';
+      if (programId != null) {
+        await prefs.setString('favorite_program_id_$uid', programId);
+      } else {
+        await prefs.remove('favorite_program_id_$uid');
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la sauvegarde du programme favori: $e");
+    }
+  }
+
+  Future<void> _loadFavoriteProgramId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = _currentUserId ?? 'guest';
+      _favoriteProgramId = prefs.getString('favorite_program_id_$uid');
+    } catch (e) {
+      debugPrint("Erreur lors du chargement du programme favori: $e");
+    }
+  }
 
   List<dynamic> get flatHistory => _flatHistory;
   double get weeklyVolume => _weeklyVolume;
@@ -71,6 +112,7 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
 
     await repository.init();
+    await _loadFavoriteProgramId();
     _exercises = repository.getExercises();
     _programs = repository.getPrograms();
     _history = repository.getHistory();
@@ -85,7 +127,9 @@ class WorkoutProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    _currentUserId = userId;
     await repository.setUserId(userId);
+    await _loadFavoriteProgramId();
     _exercises = repository.getExercises();
     _programs = repository.getPrograms();
     _history = repository.getHistory();

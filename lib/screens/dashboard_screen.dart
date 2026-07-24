@@ -220,6 +220,9 @@ class DashboardScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const ActiveSessionScreen()),
                     );
                   },
+                  onSettingsTap: () {
+                    _showSelectQuickProgramDialog(buildContext, workoutProvider);
+                  },
                 ),
                 const SizedBox(height: 15),
               ],
@@ -293,6 +296,7 @@ class DashboardScreen extends StatelessWidget {
     required IconData icon,
     required List<Color> gradientColors,
     required VoidCallback onTap,
+    VoidCallback? onSettingsTap,
   }) {
     return InkWell(
       onTap: onTap,
@@ -333,7 +337,15 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            if (onSettingsTap != null) ...[
+              const SizedBox(width: 6),
+              IconButton(
+                icon: const Icon(Icons.push_pin_outlined, color: Colors.white70, size: 20),
+                tooltip: "Changer le programme en raccourci",
+                onPressed: onSettingsTap,
+              ),
+            ],
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
@@ -349,6 +361,56 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSelectQuickProgramDialog(BuildContext context, WorkoutProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Programme en raccourci"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Choisissez quel programme afficher sur l'écran d'accueil pour un lancement rapide :",
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  ...provider.programs.map((prog) {
+                    final isCurrent = provider.quickProgram?.id == prog.id;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        isCurrent ? Icons.push_pin : Icons.push_pin_outlined,
+                        color: isCurrent ? const Color(0xff2563eb) : Colors.grey,
+                      ),
+                      title: Text(prog.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: prog.description.isNotEmpty ? Text(prog.description, maxLines: 1) : null,
+                      trailing: isCurrent ? const Icon(Icons.check_circle, color: Color(0xff2563eb)) : null,
+                      onTap: () {
+                        provider.setFavoriteProgramId(prog.id);
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Fermer"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

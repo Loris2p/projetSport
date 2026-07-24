@@ -199,6 +199,19 @@ class ProgramsScreen extends StatelessWidget {
                     },
                   ),
                   IconButton(
+                    icon: Icon(
+                      provider.quickProgram?.id == program.id ? Icons.push_pin : Icons.push_pin_outlined,
+                      size: 20,
+                      color: provider.quickProgram?.id == program.id ? const Color(0xff2563eb) : Colors.grey,
+                    ),
+                    tooltip: provider.quickProgram?.id == program.id ? "Programme épinglé sur l'accueil" : "Épingler sur l'accueil",
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      final isPinned = provider.quickProgram?.id == program.id;
+                      provider.setFavoriteProgramId(isPinned ? null : program.id);
+                    },
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
                     tooltip: "Supprimer",
                     visualDensity: VisualDensity.compact,
