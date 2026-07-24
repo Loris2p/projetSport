@@ -499,13 +499,12 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     ProgramExercise progEx,
     Exercise ex,
   ) {
-    final groupId = _exerciseGroups[ex.id];
+    final groupId = progEx.groupId ?? _exerciseGroups[ex.id];
 
     String targetsText = _getProgramExerciseSummary(progEx);
 
-
     return Card(
-      key: ValueKey(progEx.exerciseId),
+      key: ObjectKey(progEx),
       margin: const EdgeInsets.only(bottom: 12.0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -578,12 +577,16 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                   },
                 ),
 
-                // Actions popup (Superset, Delete)
+                // Actions popup (Duplicate, Superset, Delete)
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.grey),
                   onSelected: (val) {
-                    if (val == 'group') {
-                      _showGroupDialog(context, ex);
+                    if (val == 'duplicate') {
+                      setState(() {
+                        _selectedExercises.insert(idx + 1, progEx.copyWith());
+                      });
+                    } else if (val == 'group') {
+                      _showGroupDialogForProgEx(context, idx, progEx, ex);
                     } else if (val == 'delete') {
                       setState(() {
                         _selectedExercises.removeAt(idx);
@@ -591,6 +594,16 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                     }
                   },
                   itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, size: 20, color: Color(0xff2563eb)),
+                          SizedBox(width: 8),
+                          Text("Dupliquer l'exercice"),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'group',
                       child: Row(
@@ -730,18 +743,21 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     return colors[hash % colors.length];
   }
 
-  void _showGroupDialog(BuildContext context, Exercise ex) {
-    final existingGroups = _exerciseGroups.values
-        .where((g) => g.isNotEmpty)
-        .toSet()
-        .toList();
+
+  void _showGroupDialogForProgEx(BuildContext context, int idx, ProgramExercise progEx, Exercise ex) {
+    final existingGroups = <String>{
+      ..._selectedExercises.map((e) => e.groupId ?? '').where((g) => g.isNotEmpty),
+      ..._exerciseGroups.values.where((g) => g.isNotEmpty),
+    }.toList();
+
+    final currentGroup = progEx.groupId ?? _exerciseGroups[ex.id];
 
     showDialog(
       context: context,
       builder: (context) {
         String? newGroupName;
         return AlertDialog(
-          title: const Text("Associer à un groupe"),
+          title: Text("Associer à un groupe (${ex.name})"),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -751,13 +767,14 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                   const Text("Groupes existants :", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 8),
                   ...existingGroups.map((group) {
-                    final isCurrent = _exerciseGroups[ex.id] == group;
+                    final isCurrent = currentGroup == group;
                     return ListTile(
                       title: Text(group),
                       leading: Icon(Icons.group_work, color: _getGroupColor(group)),
                       trailing: isCurrent ? const Icon(Icons.check, color: Color(0xff2563eb)) : null,
                       onTap: () {
                         setState(() {
+                          _selectedExercises[idx] = progEx.copyWith(groupId: group);
                           _exerciseGroups[ex.id] = group;
                         });
                         Navigator.pop(context);
@@ -782,11 +799,11 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (_exerciseGroups.containsKey(ex.id) && _exerciseGroups[ex.id]!.isNotEmpty)
+                    if (currentGroup != null && currentGroup.isNotEmpty)
                       TextButton(
                         onPressed: () {
                           setState(() {
-                            _exerciseGroups.remove(ex.id);
+                            _selectedExercises[idx] = progEx.copyWith(clearGroupId: true);
                           });
                           Navigator.pop(context);
                         },
@@ -798,6 +815,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                       onPressed: () {
                         if (newGroupName != null && newGroupName!.isNotEmpty) {
                           setState(() {
+                            _selectedExercises[idx] = progEx.copyWith(groupId: newGroupName);
                             _exerciseGroups[ex.id] = newGroupName!;
                           });
                         }
@@ -1773,8 +1791,8 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final ex = filtered[index];
-                                  final existingProgExIndex = _selectedExercises.indexWhere((e) => e.exerciseId == ex.id);
-                                  final isAlreadySelected = existingProgExIndex != -1;
+                                  final addedCount = _selectedExercises.where((e) => e.exerciseId == ex.id).length;
+                                  final isAlreadySelected = addedCount > 0;
 
                                   return Card(
                                     margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -1807,36 +1825,62 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                         padding: const EdgeInsets.only(top: 4.0),
                                         child: MultiCategoryBadges(categories: ex.categories, compact: true),
                                       ),
-                                      trailing: isAlreadySelected
-                                          ? Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.check_circle, color: Color(0xff2563eb), size: 22),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                                                  onPressed: () {
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (addedCount > 0) ...[
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xff2563eb).withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: const Color(0xff2563eb)),
+                                              ),
+                                              child: Text(
+                                                "x$addedCount",
+                                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 2),
+                                            IconButton(
+                                              icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 22),
+                                              tooltip: "Ajouter une autre occurrence",
+                                              onPressed: () {
+                                                _showConfigureExerciseTargetDialog(
+                                                  context: context,
+                                                  ex: ex,
+                                                  initialSettings: null,
+                                                  onConfirm: (configuredProgEx) {
                                                     setState(() {
-                                                      _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
+                                                      _selectedExercises.add(configuredProgEx);
                                                     });
                                                     setModalState(() {});
                                                   },
-                                                ),
-                                              ],
-                                            )
-                                          : const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 24),
+                                                );
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                              tooltip: "Retirer toutes les occurrences",
+                                              onPressed: () {
+                                                setState(() {
+                                                  _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
+                                                });
+                                                setModalState(() {});
+                                              },
+                                            ),
+                                          ] else
+                                            const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 24),
+                                        ],
+                                      ),
                                       onTap: () {
-                                        // Déclencher directement la petite fenêtre de paramétrage (séries, reps, repos)
                                         _showConfigureExerciseTargetDialog(
                                           context: context,
                                           ex: ex,
-                                          initialSettings: isAlreadySelected ? _selectedExercises[existingProgExIndex] : null,
+                                          initialSettings: null,
                                           onConfirm: (configuredProgEx) {
                                             setState(() {
-                                              if (isAlreadySelected) {
-                                                _selectedExercises[existingProgExIndex] = configuredProgEx;
-                                              } else {
-                                                _selectedExercises.add(configuredProgEx);
-                                              }
+                                              _selectedExercises.add(configuredProgEx);
                                             });
                                             setModalState(() {});
                                           },

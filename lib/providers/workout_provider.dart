@@ -275,13 +275,18 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void updateActiveSessionExerciseType(String exerciseId, ExerciseType type) {
+  void updateActiveSessionExerciseType(dynamic target, ExerciseType type) {
     if (_activeSession == null) return;
-    final index = _activeSession!.exercises.indexWhere((e) => e.exerciseId == exerciseId);
+    int index = -1;
+    if (target is PerformedExercise) {
+      index = _activeSession!.exercises.indexOf(target);
+    } else if (target is String) {
+      index = _activeSession!.exercises.indexWhere((e) => e.exerciseId == target);
+    }
     if (index >= 0) {
       final oldPerfEx = _activeSession!.exercises[index];
       _activeSession!.exercises[index] = PerformedExercise(
-        exerciseId: exerciseId,
+        exerciseId: oldPerfEx.exerciseId,
         type: type,
         sets: oldPerfEx.sets,
         notes: oldPerfEx.notes,
@@ -291,9 +296,17 @@ class WorkoutProvider with ChangeNotifier {
     }
   }
 
-  void removeExerciseFromActiveSession(String exerciseId) {
+  void removeExerciseFromActiveSession(dynamic target) {
     if (_activeSession == null) return;
-    _activeSession!.exercises.removeWhere((e) => e.exerciseId == exerciseId);
+    if (target is PerformedExercise) {
+      _activeSession!.exercises.remove(target);
+    } else if (target is String) {
+      _activeSession!.exercises.removeWhere((e) => e.exerciseId == target);
+    } else if (target is int) {
+      if (target >= 0 && target < _activeSession!.exercises.length) {
+        _activeSession!.exercises.removeAt(target);
+      }
+    }
     notifyListeners();
   }
 

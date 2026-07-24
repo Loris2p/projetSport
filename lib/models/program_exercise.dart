@@ -79,6 +79,43 @@ class ProgramExercise {
           : null,
     );
   }
+
+  ProgramExercise copyWith({
+    String? exerciseId,
+    ExerciseType? type,
+    int? setsCount,
+    int? repsCount,
+    int? restTime,
+    int? durationTarget,
+    double? distanceTarget,
+    double? speedTarget,
+    double? inclineTarget,
+    int? workTime,
+    int? intervalRestTime,
+    String? tempoCode,
+    String? videoUrl,
+    String? groupId,
+    bool clearGroupId = false,
+    List<ExerciseSet>? customSets,
+  }) {
+    return ProgramExercise(
+      exerciseId: exerciseId ?? this.exerciseId,
+      type: type ?? this.type,
+      setsCount: setsCount ?? this.setsCount,
+      repsCount: repsCount ?? this.repsCount,
+      restTime: restTime ?? this.restTime,
+      durationTarget: durationTarget ?? this.durationTarget,
+      distanceTarget: distanceTarget ?? this.distanceTarget,
+      speedTarget: speedTarget ?? this.speedTarget,
+      inclineTarget: inclineTarget ?? this.inclineTarget,
+      workTime: workTime ?? this.workTime,
+      intervalRestTime: intervalRestTime ?? this.intervalRestTime,
+      tempoCode: tempoCode ?? this.tempoCode,
+      videoUrl: videoUrl ?? this.videoUrl,
+      groupId: clearGroupId ? null : (groupId ?? this.groupId),
+      customSets: customSets ?? this.customSets,
+    );
+  }
 }
 
 

@@ -196,7 +196,7 @@ class ActiveSessionScreen extends StatelessWidget {
     final groupColor = hasGroup ? _getGroupColor(perfEx.groupId!) : null;
 
     return Card(
-      key: ValueKey(perfEx.exerciseId),
+      key: ObjectKey(perfEx),
       margin: const EdgeInsets.only(bottom: 16.0),
       child: IntrinsicHeight(
         child: Row(
@@ -1184,7 +1184,7 @@ class ActiveSessionScreen extends StatelessWidget {
                 title: Text(t.label),
                 trailing: perfEx.type == t ? const Icon(Icons.check, color: Color(0xff2563eb)) : null,
                 onTap: () {
-                  provider.updateActiveSessionExerciseType(perfEx.exerciseId, t);
+                  provider.updateActiveSessionExerciseType(perfEx, t);
                   Navigator.pop(ctx);
                 },
               );
