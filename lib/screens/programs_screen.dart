@@ -97,7 +97,23 @@ class ProgramsScreen extends StatelessWidget {
           ),
           child: const Icon(Icons.fitness_center, color: Color(0xff2563eb)),
         ),
-        trailing: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.play_circle_fill, color: Color(0xff2563eb), size: 28),
+              tooltip: "Démarrer le programme",
+              onPressed: () {
+                provider.startSession(program);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ActiveSessionScreen()),
+                );
+              },
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          ],
+        ),
         childrenPadding: const EdgeInsets.all(16.0),
         expandedAlignment: Alignment.topLeft,
         children: [
