@@ -5,6 +5,7 @@ import 'package:firedart/firedart.dart' as fd;
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
+import '../models/personal_record.dart';
 import 'workout_repository.dart';
 
 class FirestoreWorkoutRepository implements WorkoutRepository {
@@ -16,6 +17,7 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
   List<Exercise> _exercises = [];
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _sessions = [];
+  List<PersonalRecord> _records = [];
 
   @override
   Future<void> init() async {
@@ -38,6 +40,7 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
       _exercises = [];
       _programs = [];
       _sessions = [];
+      _records = [];
       return;
     }
 
@@ -100,6 +103,17 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
           .toList();
       _sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
 
+      // 4. Charger les records personnels (PRs)
+      final recordsQuery = await fd.Firestore.instance
+          .collection('users')
+          .document(_userId!)
+          .collection('records')
+          .get();
+
+      _records = recordsQuery
+          .map((doc) => PersonalRecord.fromJson(doc.map))
+          .toList();
+
     } else {
       // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur)
       // Exercices publics (isCustom == false)
@@ -156,6 +170,17 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
       _sessions = sessionsQuery.docs
           .map((doc) => WorkoutSession.fromJson(doc.data()))
+          .toList();
+
+      // 4. Charger les records personnels (PRs)
+      final recordsQuery = await _firestore
+          .collection('users')
+          .doc(_userId!)
+          .collection('records')
+          .get();
+
+      _records = recordsQuery.docs
+          .map((doc) => PersonalRecord.fromJson(doc.data()))
           .toList();
     }
   }
@@ -298,4 +323,54 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
           .delete();
     }
   }
+
+  @override
+  List<PersonalRecord> getPersonalRecords() => _records;
+
+  @override
+  Future<void> savePersonalRecord(PersonalRecord record) async {
+    final index = _records.indexWhere((r) => r.exerciseId == record.exerciseId);
+    if (index >= 0) {
+      _records[index] = record;
+    } else {
+      _records.add(record);
+    }
+
+    if (isDesktopNative) {
+      await fd.Firestore.instance
+          .collection('users')
+          .document(_userId!)
+          .collection('records')
+          .document(record.exerciseId)
+          .set(record.toJson());
+    } else {
+      await _firestore
+          .collection('users')
+          .doc(_userId!)
+          .collection('records')
+          .doc(record.exerciseId)
+          .set(record.toJson(), fb_store.SetOptions(merge: true));
+    }
+  }
+
+  @override
+  Future<void> deletePersonalRecord(String exerciseId) async {
+    _records.removeWhere((r) => r.exerciseId == exerciseId);
+    if (isDesktopNative) {
+      await fd.Firestore.instance
+          .collection('users')
+          .document(_userId!)
+          .collection('records')
+          .document(exerciseId)
+          .delete();
+    } else {
+      await _firestore
+          .collection('users')
+          .doc(_userId!)
+          .collection('records')
+          .doc(exerciseId)
+          .delete();
+    }
+  }
 }
+

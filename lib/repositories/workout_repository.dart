@@ -1,6 +1,7 @@
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
+import '../models/personal_record.dart';
 
 abstract class WorkoutRepository {
   Future<void> init();
@@ -16,5 +17,10 @@ abstract class WorkoutRepository {
   List<WorkoutSession> getHistory();
   Future<void> saveSession(WorkoutSession session);
   Future<void> deleteSession(String id);
+
+  List<PersonalRecord> getPersonalRecords();
+  Future<void> savePersonalRecord(PersonalRecord record);
+  Future<void> deletePersonalRecord(String exerciseId);
 }
+
 

@@ -2,6 +2,7 @@ import 'package:sport_app/models/exercise.dart';
 import 'package:sport_app/models/user_profile.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
+import 'package:sport_app/models/personal_record.dart';
 import 'package:sport_app/repositories/auth_repository.dart';
 import 'package:sport_app/repositories/workout_repository.dart';
 
@@ -106,6 +107,7 @@ class MockWorkoutRepository implements WorkoutRepository {
   final List<Exercise> exercises = [];
   final List<WorkoutProgram> programs = [];
   final List<WorkoutSession> history = [];
+  final List<PersonalRecord> personalRecords = [];
 
   bool shouldFail = false;
 
@@ -181,5 +183,27 @@ class MockWorkoutRepository implements WorkoutRepository {
   Future<void> deleteSession(String id) async {
     if (shouldFail) throw Exception('Delete session failed');
     history.removeWhere((s) => s.id == id);
+  }
+
+  @override
+  List<PersonalRecord> getPersonalRecords() {
+    return List.from(personalRecords);
+  }
+
+  @override
+  Future<void> savePersonalRecord(PersonalRecord record) async {
+    if (shouldFail) throw Exception('Save record failed');
+    final index = personalRecords.indexWhere((r) => r.exerciseId == record.exerciseId);
+    if (index >= 0) {
+      personalRecords[index] = record;
+    } else {
+      personalRecords.add(record);
+    }
+  }
+
+  @override
+  Future<void> deletePersonalRecord(String exerciseId) async {
+    if (shouldFail) throw Exception('Delete record failed');
+    personalRecords.removeWhere((r) => r.exerciseId == exerciseId);
   }
 }

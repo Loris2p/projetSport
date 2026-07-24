@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,15 +9,18 @@ import '../models/performed_exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
 import '../models/program_exercise.dart';
+import '../models/personal_record.dart';
 import '../repositories/workout_repository.dart';
+import '../services/notification_service.dart';
 
-class WorkoutProvider with ChangeNotifier {
+class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
   final WorkoutRepository repository;
   final _uuid = const Uuid();
 
   List<Exercise> _exercises = [];
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _history = [];
+  List<PersonalRecord> _personalRecords = [];
   String? _favoriteProgramId;
   String? _currentUserId;
 
@@ -27,7 +30,9 @@ class WorkoutProvider with ChangeNotifier {
   // Rest Timer State
   int _restTimerDuration = 90; // Default 90s
   Timer? _timer;
+  DateTime? _restTimerEndTime;
   bool _isRestTimerActive = false;
+  final NotificationService _notificationService = NotificationService();
 
   // Active Session Duration Timer
   Timer? _sessionDurationTimer;
@@ -48,12 +53,38 @@ class WorkoutProvider with ChangeNotifier {
 
   WorkoutProvider({
     required this.repository,
-  });
+  }) {
+    WidgetsBinding.instance.addObserver(this);
+    _notificationService.init();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isRestTimerActive && _restTimerEndTime != null) {
+      _checkRestTimerState();
+    }
+  }
+
+  void _checkRestTimerState() {
+    if (!_isRestTimerActive || _restTimerEndTime == null) return;
+
+    final remaining = _restTimerEndTime!.difference(DateTime.now()).inSeconds;
+    if (remaining <= 0) {
+      _onRestTimerCompleted();
+    } else {
+      restTimerRemainingNotifier.value = remaining;
+      _notificationService.updateRestTimerNotification(
+        remainingSeconds: remaining,
+        endTime: _restTimerEndTime!,
+      );
+    }
+  }
 
   // Getters
   List<Exercise> get exercises => _exercises;
   List<WorkoutProgram> get programs => _programs;
   List<WorkoutSession> get history => _history;
+  List<PersonalRecord> get personalRecords => _personalRecords;
   WorkoutSession? get activeSession => _activeSession;
   bool get isLoading => _isLoading;
   String? get favoriteProgramId => _favoriteProgramId;
@@ -113,6 +144,7 @@ class WorkoutProvider with ChangeNotifier {
     _exercises = repository.getExercises();
     _programs = repository.getPrograms();
     _history = repository.getHistory();
+    _personalRecords = repository.getPersonalRecords();
 
     _updateWeeklyStatsAndFlatHistory();
 
@@ -130,6 +162,7 @@ class WorkoutProvider with ChangeNotifier {
     _exercises = repository.getExercises();
     _programs = repository.getPrograms();
     _history = repository.getHistory();
+    _personalRecords = repository.getPersonalRecords();
 
     // Vider les caches mémoire lors du changement d'utilisateur
     _sessionVolumeCache.clear();
@@ -212,11 +245,23 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   Future<void> deleteSession(String id) async {
+    WorkoutSession? sessionToDelete;
+    try {
+      sessionToDelete = _history.firstWhere((s) => s.id == id);
+    } catch (_) {}
+
     await repository.deleteSession(id);
     _history = repository.getHistory();
     _sessionVolumeCache.remove(id);
     _sessionPRsCache.remove(id);
     _sessionExercisesSummaryCache.remove(id);
+
+    if (sessionToDelete != null) {
+      for (var perfEx in sessionToDelete.exercises) {
+        await _recalculatePersonalRecordForExercise(perfEx.exerciseId);
+      }
+    }
+
     _updateWeeklyStatsAndFlatHistory();
     notifyListeners();
   }
@@ -503,34 +548,58 @@ class WorkoutProvider with ChangeNotifier {
     if (duration != null && duration > 0) {
       _restTimerDuration = duration;
     }
-    restTimerRemainingNotifier.value = duration ?? _restTimerDuration;
+    final startDuration = duration ?? _restTimerDuration;
+    _restTimerEndTime = DateTime.now().add(Duration(seconds: startDuration));
+    restTimerRemainingNotifier.value = startDuration;
     _isRestTimerActive = true;
     notifyListeners();
 
+    _notificationService.updateRestTimerNotification(
+      remainingSeconds: startDuration,
+      endTime: _restTimerEndTime!,
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (restTimerRemainingNotifier.value > 0) {
-        restTimerRemainingNotifier.value--;
-      } else {
-        stopRestTimer();
-      }
+      _checkRestTimerState();
     });
   }
 
   void adjustRestTimer(int deltaSeconds) {
-    if (!_isRestTimerActive) return;
+    if (!_isRestTimerActive || _restTimerEndTime == null) return;
+
     final currentRemaining = restTimerRemainingNotifier.value;
     final newRemaining = (currentRemaining + deltaSeconds).clamp(1, 3600);
     final diff = newRemaining - currentRemaining;
-    _restTimerDuration = (_restTimerDuration + diff).clamp(newRemaining, 3600);
+
+    _restTimerEndTime = DateTime.now().add(Duration(seconds: newRemaining));
+    _restTimerDuration = (_restTimerDuration + diff).clamp(1, 3600);
     restTimerRemainingNotifier.value = newRemaining;
     notifyListeners();
+
+    _notificationService.updateRestTimerNotification(
+      remainingSeconds: newRemaining,
+      endTime: _restTimerEndTime!,
+    );
+  }
+
+  void _onRestTimerCompleted() {
+    _timer?.cancel();
+    _isRestTimerActive = false;
+    _restTimerEndTime = null;
+    restTimerRemainingNotifier.value = 0;
+    notifyListeners();
+
+    _notificationService.notifyRestFinished();
   }
 
   void stopRestTimer() {
     _timer?.cancel();
     _isRestTimerActive = false;
+    _restTimerEndTime = null;
     restTimerRemainingNotifier.value = 0;
     notifyListeners();
+
+    _notificationService.cancelRestTimerNotification();
   }
 
   void cancelActiveSession() {
@@ -575,9 +644,51 @@ class WorkoutProvider with ChangeNotifier {
       exercises: completedExercises,
     );
 
-    // Save locally
+    // Save locally and in Firestore
     await repository.saveSession(finalSession);
     _history = repository.getHistory();
+
+    // Update Personal Records in Firestore
+    for (var perfEx in completedExercises) {
+      final String exId = perfEx.exerciseId;
+      PersonalRecord existingRec = _personalRecords.firstWhere(
+        (r) => r.exerciseId == exId,
+        orElse: () => PersonalRecord(exerciseId: exId),
+      );
+
+      double newMaxW = existingRec.maxWeight;
+      DateTime? newMaxWDate = existingRec.maxWeightDate;
+      double newMax1RM = existingRec.max1RM;
+      DateTime? newMax1RMDate = existingRec.max1RMDate;
+      bool updated = false;
+
+      for (var s in perfEx.sets) {
+        if (s.isCompleted) {
+          if (s.weight > newMaxW) {
+            newMaxW = s.weight;
+            newMaxWDate = finalSession.startTime;
+            updated = true;
+          }
+          if (s.estimated1RM > newMax1RM) {
+            newMax1RM = s.estimated1RM;
+            newMax1RMDate = finalSession.startTime;
+            updated = true;
+          }
+        }
+      }
+
+      if (updated) {
+        final updatedRec = existingRec.copyWith(
+          maxWeight: newMaxW,
+          maxWeightDate: newMaxWDate,
+          max1RM: newMax1RM,
+          max1RMDate: newMax1RMDate,
+          updatedAt: DateTime.now(),
+        );
+        await repository.savePersonalRecord(updatedRec);
+      }
+    }
+    _personalRecords = repository.getPersonalRecords();
 
     // Clean up
     if (finalSession.id.isNotEmpty) {
@@ -602,26 +713,13 @@ class WorkoutProvider with ChangeNotifier {
       return;
     }
 
-    double bestWeight = 0.0;
-    double best1RM = 0.0;
+    PersonalRecord? record;
+    try {
+      record = _personalRecords.firstWhere((r) => r.exerciseId == exerciseId);
+    } catch (_) {}
 
-    // Scan history
-    for (var session in _history) {
-      for (var perfEx in session.exercises) {
-        if (perfEx.exerciseId == exerciseId) {
-          for (var s in perfEx.sets) {
-            if (s.isCompleted) {
-              if (s.weight > bestWeight) {
-                bestWeight = s.weight;
-              }
-              if (s.estimated1RM > best1RM) {
-                best1RM = s.estimated1RM;
-              }
-            }
-          }
-        }
-      }
-    }
+    double bestWeight = record?.maxWeight ?? 0.0;
+    double best1RM = record?.max1RM ?? 0.0;
 
     // Scan current session (excluding this set itself)
     if (_activeSession != null) {
@@ -644,6 +742,47 @@ class WorkoutProvider with ChangeNotifier {
     // Set PR flags
     set.isWeightPR = set.weight > 0 && (bestWeight == 0 || set.weight > bestWeight);
     set.is1RMPR = set.estimated1RM > 0 && (best1RM == 0 || set.estimated1RM > best1RM);
+  }
+
+  Future<void> _recalculatePersonalRecordForExercise(String exerciseId) async {
+    double maxW = 0.0;
+    DateTime? maxWDate;
+    double max1RM = 0.0;
+    DateTime? max1RMDate;
+
+    for (var session in _history) {
+      for (var perfEx in session.exercises) {
+        if (perfEx.exerciseId == exerciseId) {
+          for (var s in perfEx.sets) {
+            if (s.isCompleted) {
+              if (s.weight > maxW) {
+                maxW = s.weight;
+                maxWDate = session.startTime;
+              }
+              if (s.estimated1RM > max1RM) {
+                max1RM = s.estimated1RM;
+                max1RMDate = session.startTime;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (maxW > 0 || max1RM > 0) {
+      final rec = PersonalRecord(
+        exerciseId: exerciseId,
+        maxWeight: maxW,
+        maxWeightDate: maxWDate,
+        max1RM: max1RM,
+        max1RMDate: max1RMDate,
+        updatedAt: DateTime.now(),
+      );
+      await repository.savePersonalRecord(rec);
+    } else {
+      await repository.deletePersonalRecord(exerciseId);
+    }
+    _personalRecords = repository.getPersonalRecords();
   }
 
   // Calculate volume of a session (using memory cache)
@@ -725,6 +864,7 @@ class WorkoutProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _sessionDurationTimer?.cancel();
     sessionDurationNotifier.dispose();
