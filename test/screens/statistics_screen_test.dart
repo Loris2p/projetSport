@@ -5,10 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:sport_app/providers/auth_provider.dart';
 import 'package:sport_app/providers/workout_provider.dart';
 import 'package:sport_app/screens/statistics_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
   setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('fr_FR', null);
   });
 

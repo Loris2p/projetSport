@@ -6,11 +6,14 @@ import 'package:sport_app/models/performed_exercise.dart';
 import 'package:sport_app/models/program_exercise.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_app/providers/workout_provider.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
   setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('fr_FR', null);
   });
 
