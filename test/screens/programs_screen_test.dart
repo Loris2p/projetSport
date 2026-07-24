@@ -7,7 +7,6 @@ import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/providers/auth_provider.dart';
 import 'package:sport_app/providers/workout_provider.dart';
 import 'package:sport_app/screens/programs_screen.dart';
-import 'package:sport_app/services/health_sync_service.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
@@ -27,7 +26,6 @@ void main() {
       authProvider = AuthProvider(authRepository: mockAuthRepo);
       workoutProvider = WorkoutProvider(
         repository: mockWorkoutRepo,
-        healthSyncService: MockHealthSyncService(),
       );
 
       mockWorkoutRepo.programs.add(

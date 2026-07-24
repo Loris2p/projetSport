@@ -7,7 +7,6 @@ import 'package:sport_app/models/program_exercise.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
 import 'package:sport_app/providers/workout_provider.dart';
-import 'package:sport_app/services/health_sync_service.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
@@ -17,15 +16,12 @@ void main() {
 
   group('WorkoutProvider Comprehensive State Management Tests', () {
     late MockWorkoutRepository mockRepo;
-    late MockHealthSyncService mockHealthSync;
     late WorkoutProvider provider;
 
     setUp(() {
       mockRepo = MockWorkoutRepository();
-      mockHealthSync = MockHealthSyncService();
       provider = WorkoutProvider(
         repository: mockRepo,
-        healthSyncService: mockHealthSync,
       );
     });
 
@@ -312,8 +308,6 @@ void main() {
         expect(provider.activeSession, isNull);
         expect(provider.history.length, equals(1));
         expect(provider.history.first.name, equals('Session avec au moins une série validée'));
-        expect(provider.history.first.activeCaloriesBurned, isNotNull);
-        expect(provider.history.first.averageHeartRate, isNotNull);
       });
 
       test('finishActiveSession() with no completed sets should cancel session', () async {
@@ -376,6 +370,37 @@ void main() {
         expect(flatList.isNotEmpty, isTrue);
         expect(flatList.first, isA<String>());
         expect(flatList.first.toString().toLowerCase(), contains('juillet'));
+      });
+    });
+
+    group('Rest Timer tests', () {
+      test('startRestTimer updates restTimerDuration and restTimerRemaining', () {
+        provider.startRestTimer(120);
+
+        expect(provider.isRestTimerActive, isTrue);
+        expect(provider.restTimerDuration, equals(120));
+        expect(provider.restTimerRemaining, equals(120));
+      });
+
+      test('adjustRestTimer correctly modifies remaining and total rest duration', () {
+        provider.startRestTimer(60);
+
+        provider.adjustRestTimer(15);
+        expect(provider.restTimerRemaining, equals(75));
+        expect(provider.restTimerDuration, equals(75));
+
+        provider.adjustRestTimer(-10);
+        expect(provider.restTimerRemaining, equals(65));
+        expect(provider.restTimerDuration, equals(65));
+      });
+
+      test('stopRestTimer resets active status and remaining time', () {
+        provider.startRestTimer(90);
+        expect(provider.isRestTimerActive, isTrue);
+
+        provider.stopRestTimer();
+        expect(provider.isRestTimerActive, isFalse);
+        expect(provider.restTimerRemaining, equals(0));
       });
     });
   });

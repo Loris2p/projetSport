@@ -5,7 +5,6 @@ import 'package:sport_app/models/user_profile.dart';
 import 'package:sport_app/providers/auth_provider.dart';
 import 'package:sport_app/providers/workout_provider.dart';
 import 'package:sport_app/screens/admin_screen.dart';
-import 'package:sport_app/services/health_sync_service.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
@@ -21,7 +20,6 @@ void main() {
       authProvider = AuthProvider(authRepository: mockAuthRepo);
       workoutProvider = WorkoutProvider(
         repository: mockWorkoutRepo,
-        healthSyncService: MockHealthSyncService(),
       );
 
       final adminUser = UserProfile(uid: 'admin_1', email: 'admin@test.com', displayName: 'Admin User', isAdmin: true);

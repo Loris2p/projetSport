@@ -126,8 +126,7 @@ class RestTimerOverlay extends StatelessWidget {
                         children: [
                           IconButton(
                             onPressed: () {
-                              final newTime = (remaining - 10).clamp(1, 3600);
-                              provider.startRestTimer(newTime);
+                              provider.adjustRestTimer(-10);
                             },
                             tooltip: "-10s",
                             icon: Container(
@@ -148,7 +147,7 @@ class RestTimerOverlay extends StatelessWidget {
                           ),
                           IconButton(
                             onPressed: () {
-                              provider.startRestTimer(remaining + 15);
+                              provider.adjustRestTimer(15);
                             },
                             tooltip: "+15s",
                             icon: Container(

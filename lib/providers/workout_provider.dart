@@ -10,11 +10,9 @@ import '../models/workout_program.dart';
 import '../models/workout_session.dart';
 import '../models/program_exercise.dart';
 import '../repositories/workout_repository.dart';
-import '../services/health_sync_service.dart';
 
 class WorkoutProvider with ChangeNotifier {
   final WorkoutRepository repository;
-  final HealthSyncService healthSyncService;
   final _uuid = const Uuid();
 
   List<Exercise> _exercises = [];
@@ -50,7 +48,6 @@ class WorkoutProvider with ChangeNotifier {
 
   WorkoutProvider({
     required this.repository,
-    required this.healthSyncService,
   });
 
   // Getters
@@ -503,6 +500,9 @@ class WorkoutProvider with ChangeNotifier {
 
   void startRestTimer([int? duration]) {
     _timer?.cancel();
+    if (duration != null && duration > 0) {
+      _restTimerDuration = duration;
+    }
     restTimerRemainingNotifier.value = duration ?? _restTimerDuration;
     _isRestTimerActive = true;
     notifyListeners();
@@ -514,6 +514,16 @@ class WorkoutProvider with ChangeNotifier {
         stopRestTimer();
       }
     });
+  }
+
+  void adjustRestTimer(int deltaSeconds) {
+    if (!_isRestTimerActive) return;
+    final currentRemaining = restTimerRemainingNotifier.value;
+    final newRemaining = (currentRemaining + deltaSeconds).clamp(1, 3600);
+    final diff = newRemaining - currentRemaining;
+    _restTimerDuration = (_restTimerDuration + diff).clamp(newRemaining, 3600);
+    restTimerRemainingNotifier.value = newRemaining;
+    notifyListeners();
   }
 
   void stopRestTimer() {
@@ -556,20 +566,6 @@ class WorkoutProvider with ChangeNotifier {
       return null;
     }
 
-    // Load health metrics (average heart rate and calories) for session duration
-    double? activeCalories;
-    double? heartRate;
-    try {
-      final metrics = await healthSyncService.fetchMetrics(
-        startTime: _activeSession!.startTime,
-        endTime: endTime,
-      );
-      activeCalories = metrics['activeCaloriesBurned'];
-      heartRate = metrics['averageHeartRate'];
-    } catch (e) {
-      debugPrint("Erreur de récupération des métriques de santé: $e");
-    }
-
     final finalSession = WorkoutSession(
       id: _activeSession!.id,
       programId: _activeSession!.programId,
@@ -577,25 +573,11 @@ class WorkoutProvider with ChangeNotifier {
       startTime: _activeSession!.startTime,
       endTime: endTime,
       exercises: completedExercises,
-      activeCaloriesBurned: activeCalories,
-      averageHeartRate: heartRate,
     );
 
     // Save locally
     await repository.saveSession(finalSession);
     _history = repository.getHistory();
-
-    // Write to health kit / Health Connect
-    try {
-      await healthSyncService.writeWorkout(
-        startTime: finalSession.startTime,
-        endTime: endTime,
-        activityName: finalSession.name,
-        calories: activeCalories,
-      );
-    } catch (e) {
-      debugPrint("Erreur d'écriture dans le Health Store: $e");
-    }
 
     // Clean up
     if (finalSession.id.isNotEmpty) {

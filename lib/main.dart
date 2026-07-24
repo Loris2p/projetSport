@@ -14,7 +14,6 @@ import 'providers/auth_provider.dart';
 import 'repositories/firebase_auth_repository.dart';
 import 'repositories/firestore_workout_repository.dart';
 import 'services/ad_service.dart';
-import 'services/health_sync_service.dart';
 import 'services/prefs_token_store.dart';
 import 'screens/main_shell.dart';
 import 'screens/login_screen.dart';
@@ -48,13 +47,9 @@ void main() async {
   final authRepository = FirebaseAuthRepository();
   final workoutRepository = FirestoreWorkoutRepository();
 
-  // STANDBY : Utilisation de MockHealthSyncService au lieu de FlutterHealthSyncService pour le développement local
-  final healthSyncService = MockHealthSyncService();
-
   final authProvider = AuthProvider(authRepository: authRepository);
   final workoutProvider = WorkoutProvider(
     repository: workoutRepository,
-    healthSyncService: healthSyncService,
   );
 
   // Pre-load data from local storage
