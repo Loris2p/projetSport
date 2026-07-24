@@ -643,12 +643,20 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                               final ExerciseSet set = entry.value;
 
                               String weightText = "${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg";
-                              if (set.duration > 0) {
+                              if (perfEx.type == ExerciseType.cardio) {
+                                final min = set.duration ~/ 60;
+                                weightText = min > 0 ? "$min min" : "${set.duration}s";
+                              } else if (set.duration > 0) {
                                 weightText = "${set.duration}s";
                               }
 
                               String repsText = "${set.reps}";
-                              if (set.distance > 0) {
+                              if (perfEx.type == ExerciseType.cardio) {
+                                List<String> card = [];
+                                if (set.speed > 0) card.add("${set.speed.toStringAsFixed(1).replaceAll('.0', '')}km/h");
+                                if (set.incline > 0) card.add("${set.incline.toStringAsFixed(1).replaceAll('.0', '')}%");
+                                repsText = card.isEmpty ? (set.distance > 0 ? "${set.distance.toStringAsFixed(1)} km" : "-") : card.join(" ");
+                              } else if (set.distance > 0) {
                                 repsText = "${set.distance.toStringAsFixed(1)} km";
                               }
 

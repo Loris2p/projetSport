@@ -216,7 +216,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   void _showExerciseDialog(BuildContext context, Exercise? ex, WorkoutProvider provider) {
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
-    List<String> selectedCategories = ex != null ? List.from(ex.categories) : ['Pectoraux'];
+    List<String> selectedCategories = ex != null ? List.from(ex.categories) : [];
+
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
 
@@ -236,13 +237,22 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                     children: [
                       TextFormField(
                         initialValue: name,
+                        textCapitalization: TextCapitalization.sentences,
                         decoration: const InputDecoration(
                           labelText: "Nom de l'exercice",
                           border: OutlineInputBorder(),
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
-                        onSaved: (val) => name = val!.trim(),
+                        onSaved: (val) {
+                          final trimmed = val!.trim();
+                          if (trimmed.isNotEmpty) {
+                            name = trimmed[0].toUpperCase() + trimmed.substring(1);
+                          } else {
+                            name = trimmed;
+                          }
+                        },
                       ),
+
                       const SizedBox(height: 16),
                       const Text(
                         "Catégorie(s) musculaire(s) :",

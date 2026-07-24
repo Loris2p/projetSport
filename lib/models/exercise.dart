@@ -16,7 +16,10 @@ class Exercise {
     this.notes,
     this.videoUrl,
     this.isCustom = false,
-  }) : categories = categories ?? (category != null && category.isNotEmpty ? [category] : const ['Pectoraux']);
+  }) : categories = (categories != null && categories.isNotEmpty)
+            ? categories
+            : (category != null && category.isNotEmpty ? [category] : const ['Autre']);
+
 
   /// Getter de compatibilité renvoyant la catégorie principale
   String get category => categories.isNotEmpty ? categories.first : 'Autre';

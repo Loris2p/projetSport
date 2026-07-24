@@ -464,11 +464,19 @@ class SessionDetailScreen extends StatelessWidget {
 
                                   String metricsText = '';
                                   if (perfEx.type == ExerciseType.cardio) {
-                                    metricsText = "${set.distance.toStringAsFixed(1)} km en ${formatDuration(set.duration)}";
+                                    List<String> details = [];
+                                    if (set.duration > 0) details.add(formatDuration(set.duration));
+                                    if (set.distance > 0) details.add("${set.distance.toStringAsFixed(1)} km");
+                                    if (set.speed > 0) details.add("${set.speed.toStringAsFixed(1).replaceAll('.0', '')} km/h");
+                                    if (set.incline > 0) details.add("${set.incline.toStringAsFixed(1).replaceAll('.0', '')}% pente");
+                                    metricsText = details.isEmpty ? "Cardio" : details.join(" • ");
                                   } else if (perfEx.type == ExerciseType.isometry) {
                                     metricsText = "${set.weight > 0 ? '${set.weight.toStringAsFixed(1).replaceAll('.0', '')} kg x ' : ''}${formatDuration(set.duration)}";
                                   } else if (perfEx.type == ExerciseType.intervals) {
-                                    metricsText = "${set.workTime}s effort / ${set.intervalRest}s repos";
+                                    List<String> details = ["${set.workTime}s effort / ${set.intervalRest}s repos"];
+                                    if (set.speed > 0) details.add("${set.speed.toStringAsFixed(1).replaceAll('.0', '')} km/h");
+                                    if (set.incline > 0) details.add("${set.incline.toStringAsFixed(1).replaceAll('.0', '')}% pente");
+                                    metricsText = details.join(" • ");
                                   } else if (perfEx.type == ExerciseType.amrap || perfEx.type == ExerciseType.forTime) {
                                     metricsText = "${set.reps} reps en ${formatDuration(set.duration)}";
                                   } else if (perfEx.type == ExerciseType.emom) {

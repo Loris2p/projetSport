@@ -519,12 +519,25 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
                     ),
                   ),
                 ),
+                if (perfEx.type.headers.length >= 5)
+                  Expanded(
+                    flex: 3,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          perfEx.type.headers[3],
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 SizedBox(
                   width: 45,
                   child: Center(
                     child: Text(
-                      perfEx.type.headers[3],
+                      perfEx.type.headers.length >= 5 ? perfEx.type.headers[4] : perfEx.type.headers[3],
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
                     ),
                   ),
@@ -626,6 +639,11 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
             child: _buildSetCol2(context, perfEx, exercise, set, isCompleted, provider),
           ),
 
+          if (perfEx.type.headers.length >= 5)
+            Expanded(
+              flex: 3,
+              child: _buildSetCol3(context, perfEx, exercise, set, isCompleted, provider),
+            ),
 
           // Check OK / PR Indicator
           SizedBox(
@@ -755,13 +773,19 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
         );
 
       case ExerciseType.cardio:
+        double initialVal = set.duration > 0 ? (set.duration / 60.0) : (set.distance > 0 ? set.distance : 10.0);
+        String suffixStr = set.duration > 0 || set.distance == 0 ? "min" : "km";
         return SetNumericInput(
-          initialValue: set.distance,
-          suffix: "km",
+          initialValue: initialVal,
+          suffix: suffixStr,
           isDecimal: true,
           enabled: !isCompleted,
           onChanged: (val) {
-            provider.updateSetMetrics(set, set.weight, set.reps, distance: val);
+            if (suffixStr == "min") {
+              provider.updateSetMetrics(set, set.weight, set.reps, duration: (val * 60).toInt());
+            } else {
+              provider.updateSetMetrics(set, set.weight, set.reps, distance: val);
+            }
           },
         );
 
@@ -830,8 +854,18 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
           },
         );
 
-      case ExerciseType.isometry:
       case ExerciseType.cardio:
+        return SetNumericInput(
+          initialValue: set.speed,
+          suffix: "km/h",
+          isDecimal: true,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, speed: val);
+          },
+        );
+
+      case ExerciseType.isometry:
       case ExerciseType.forTime:
         return SetNumericInput(
           initialValue: set.duration.toDouble(),
@@ -889,6 +923,42 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
             ),
           ),
         );
+    }
+  }
+
+  Widget _buildSetCol3(
+    BuildContext context,
+    PerformedExercise perfEx,
+    Exercise exercise,
+    ExerciseSet set,
+    bool isCompleted,
+    WorkoutProvider provider,
+  ) {
+    switch (perfEx.type) {
+      case ExerciseType.cardio:
+        return SetNumericInput(
+          initialValue: set.incline,
+          suffix: "%",
+          isDecimal: true,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, incline: val);
+          },
+        );
+
+      case ExerciseType.intervals:
+        return SetNumericInput(
+          initialValue: set.speed,
+          suffix: "km/h",
+          isDecimal: true,
+          enabled: !isCompleted,
+          onChanged: (val) {
+            provider.updateSetMetrics(set, set.weight, set.reps, speed: val);
+          },
+        );
+
+      default:
+        return const SizedBox();
     }
   }
 

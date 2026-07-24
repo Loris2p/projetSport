@@ -537,7 +537,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
   void _showExerciseDialog(Exercise? ex, WorkoutProvider provider) {
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
-    List<String> selectedCategories = ex != null ? List.from(ex.categories) : ['Pectoraux'];
+    List<String> selectedCategories = ex != null ? List.from(ex.categories) : [];
+
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
     bool isCustom = ex?.isCustom ?? false;
@@ -558,13 +559,18 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                     children: [
                       TextFormField(
                         initialValue: name,
+                        textCapitalization: TextCapitalization.sentences,
                         decoration: const InputDecoration(
                           labelText: "Nom de l'exercice",
                           border: OutlineInputBorder(),
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
-                        onSaved: (val) => name = val!.trim(),
+                        onSaved: (val) {
+                          final trimmed = val!.trim();
+                          name = trimmed.isNotEmpty ? (trimmed[0].toUpperCase() + trimmed.substring(1)) : trimmed;
+                        },
                       ),
+
                       const SizedBox(height: 16),
                       const Text(
                         "Catégorie(s) musculaire(s) :",

@@ -18,15 +18,15 @@ enum ExerciseType {
   cardio(
     'cardio',
     'Cardio Continu',
-    'Effort continu en course, vélo, rameur (distance, temps, allure).',
-    ['SÉRIE', 'DISTANCE (KM)', 'DURÉE', 'ALLURE', 'OK'],
+    'Effort continu en course, vélo, tapis (durée, vitesse, pente).',
+    ['ÉTAPE', 'DURÉE (MIN)', 'KM/H', '% PENTE', 'OK'],
     Icons.directions_run,
   ),
   intervals(
     'intervals',
     'Fractionné / HIIT',
-    'Alternance de temps d\'effort intense et de récupération.',
-    ['TOUR', 'EFFORT', 'REPOS', 'REPS/DIST', 'OK'],
+    'Alternance de temps d\'effort, repos, vitesse et pente.',
+    ['TOUR', 'EFFORT (S)', 'REPOS (S)', 'KM/H', 'OK'],
     Icons.speed,
   ),
   amrap(

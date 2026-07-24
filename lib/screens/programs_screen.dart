@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/program_exercise.dart';
+import '../models/exercise_set.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
@@ -162,33 +163,43 @@ class ProgramsScreen extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextButton.icon(
-                icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
-                label: const Text("Modifier", style: TextStyle(color: Colors.grey)),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProgramEditorScreen(program: program),
-                    ),
-                  );
-                },
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                    tooltip: "Modifier",
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProgramEditorScreen(program: program),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                    tooltip: "Supprimer",
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      _showDeleteConfirm(context, program, provider);
+                    },
+                  ),
+                ],
               ),
-              TextButton.icon(
-                icon: const Icon(Icons.delete, size: 16, color: Colors.redAccent),
-                label: const Text("Supprimer", style: TextStyle(color: Colors.redAccent)),
-                onPressed: () {
-                  _showDeleteConfirm(context, program, provider);
-                },
-              ),
-              const SizedBox(width: 8),
               ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff2563eb),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
                 icon: const Icon(Icons.play_arrow, size: 18),
-                label: const Text("Démarrer"),
+                label: const Text("Démarrer", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 onPressed: () {
                   provider.startSession(program);
                   Navigator.push(
@@ -295,6 +306,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                         children: [
                           TextFormField(
                             initialValue: _name,
+                            textCapitalization: TextCapitalization.sentences,
                             decoration: const InputDecoration(
                               labelText: "Nom du programme",
                               hintText: "Ex: Upper Body Power, Push Day",
@@ -307,11 +319,16 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                               }
                               return null;
                             },
-                            onSaved: (value) => _name = value!.trim(),
+                            onSaved: (value) {
+                              final trimmed = value!.trim();
+                              _name = trimmed.isNotEmpty ? (trimmed[0].toUpperCase() + trimmed.substring(1)) : trimmed;
+                            },
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
                             initialValue: _description,
+                            textCapitalization: TextCapitalization.sentences,
+
                             decoration: const InputDecoration(
                               labelText: "Description (optionnel)",
                               hintText: "Consignes, jours prévus, objectifs...",
@@ -804,6 +821,35 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     String tempoCode = initialSettings?.tempoCode ?? '';
     String videoUrl = initialSettings?.videoUrl ?? ex.videoUrl ?? '';
 
+    // Initialisation des paliers/étapes cardio & fractionné
+    final List<ExerciseSet> cardioSteps = [];
+    if (initialSettings?.customSets != null && initialSettings!.customSets!.isNotEmpty) {
+      cardioSteps.addAll(
+        initialSettings.customSets!.map(
+          (s) => ExerciseSet(
+            id: s.id,
+            duration: s.duration,
+            distance: s.distance,
+            speed: s.speed,
+            incline: s.incline,
+            workTime: s.workTime,
+            intervalRest: s.intervalRest,
+          ),
+        ),
+      );
+    } else {
+      cardioSteps.add(
+        ExerciseSet(
+          id: '1',
+          duration: initialSettings?.durationTarget ?? 600,
+          distance: initialSettings?.distanceTarget ?? 0.0,
+          speed: initialSettings?.speedTarget ?? 4.0,
+          incline: initialSettings?.inclineTarget ?? 3.0,
+          workTime: initialSettings?.workTime ?? 30,
+          intervalRest: initialSettings?.intervalRestTime ?? 15,
+        ),
+      );
+    }
 
     showModalBottomSheet(
       context: context,
@@ -974,6 +1020,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                         onTempoChanged: (v) => tempoCode = v,
                         videoUrl: videoUrl,
                         onVideoUrlChanged: (v) => videoUrl = v,
+                        cardioSteps: cardioSteps,
                       ),
 
                       const SizedBox(height: 24),
@@ -991,20 +1038,40 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                             if (formKey.currentState!.validate()) {
                               formKey.currentState!.save();
 
+                              int finalSetsCount = 1;
+                              final currentSets = setsCount;
+                              if (selectedType == ExerciseType.reps ||
+                                  selectedType == ExerciseType.isometry ||
+                                  selectedType == ExerciseType.tempo ||
+                                  selectedType == ExerciseType.circuit) {
+                                finalSetsCount = currentSets ?? 3;
+                              } else if (selectedType == ExerciseType.cardio || selectedType == ExerciseType.intervals) {
+                                finalSetsCount = cardioSteps.length;
+                              } else if (currentSets != null && currentSets > 0) {
+                                finalSetsCount = currentSets;
+                              }
+
+                              List<ExerciseSet>? finalCustomSets;
+                              if (selectedType == ExerciseType.cardio || selectedType == ExerciseType.intervals) {
+                                finalCustomSets = List<ExerciseSet>.from(cardioSteps);
+                              }
+
                               final result = ProgramExercise(
                                 exerciseId: ex.id,
                                 type: selectedType,
-                                setsCount: setsCount ?? 3,
+                                setsCount: finalSetsCount,
                                 repsCount: repsCount ?? 10,
                                 restTime: restTime ?? 0,
-                                durationTarget: durationTarget ?? 30,
-                                distanceTarget: distanceTarget ?? 5.0,
-                                workTime: workTime ?? 30,
-                                intervalRestTime: intervalRestTime ?? 0,
+                                durationTarget: cardioSteps.isNotEmpty ? cardioSteps.first.duration : (durationTarget ?? 30),
+                                distanceTarget: cardioSteps.isNotEmpty ? cardioSteps.first.distance : (distanceTarget ?? 5.0),
+                                speedTarget: cardioSteps.isNotEmpty ? cardioSteps.first.speed : 0.0,
+                                inclineTarget: cardioSteps.isNotEmpty ? cardioSteps.first.incline : 0.0,
+                                workTime: cardioSteps.isNotEmpty ? cardioSteps.first.workTime : (workTime ?? 30),
+                                intervalRestTime: cardioSteps.isNotEmpty ? cardioSteps.first.intervalRest : (intervalRestTime ?? 0),
                                 tempoCode: tempoCode.isNotEmpty ? tempoCode : '3010',
                                 videoUrl: videoUrl.isNotEmpty ? videoUrl : null,
+                                customSets: finalCustomSets,
                               );
-
 
                               onConfirm(result);
                               Navigator.pop(ctx);
@@ -1050,6 +1117,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
     required ValueChanged<String> onTempoChanged,
     required String videoUrl,
     required ValueChanged<String> onVideoUrlChanged,
+    required List<ExerciseSet> cardioSteps,
   }) {
     switch (type) {
       case ExerciseType.reps:
@@ -1126,78 +1194,271 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
 
       case ExerciseType.cardio:
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: distanceTarget != null && distanceTarget > 0 ? distanceTarget.toString() : '',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: "Distance (km)", hintText: "ex: 5.0", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && double.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onDistanceChanged(val == null || val.trim().isEmpty ? 5.0 : (double.tryParse(val.trim()) ?? 5.0)),
-                  ),
+                Text(
+                  "Paliers & Étapes Cardio :",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: durationTarget != null && durationTarget > 0 ? durationTarget.toString() : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Durée (s)", hintText: "ex: 1800", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onDurationChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: restTime != null && restTime > 0 ? restTime.toString() : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 60", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
-                  ),
+                Text(
+                  "Durée, vitesse (km/h) & pente (%)",
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            ...cardioSteps.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final step = entry.value;
+              final durMin = step.duration > 0 ? (step.duration / 60.0) : 10.0;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xff22222a),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 11,
+                          backgroundColor: const Color(0xff2563eb).withValues(alpha: 0.2),
+                          child: Text(
+                            "${idx + 1}",
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xff2563eb)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Étape ${idx + 1}",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const Spacer(),
+                        if (cardioSteps.length > 1)
+                          InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                cardioSteps.removeAt(idx);
+                              });
+                            },
+                            child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: durMin.toStringAsFixed(1).replaceAll('.0', ''),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Durée (min)", hintText: "ex: 10", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              final parsed = double.tryParse(val.replaceAll(',', '.')) ?? 10.0;
+                              step.duration = (parsed * 60).toInt();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: step.speed > 0 ? step.speed.toStringAsFixed(1).replaceAll('.0', '') : '',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Vitesse (km/h)", hintText: "ex: 4.0", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.speed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: step.incline > 0 ? step.incline.toStringAsFixed(1).replaceAll('.0', '') : '',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Pente (%)", hintText: "ex: 3.0", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.incline = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xff2563eb),
+                  side: const BorderSide(color: Color(0xff2563eb)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () {
+                  setDialogState(() {
+                    double lastSpeed = cardioSteps.isNotEmpty ? cardioSteps.last.speed : 4.0;
+                    double lastIncline = cardioSteps.isNotEmpty ? cardioSteps.last.incline : 3.0;
+                    int lastDuration = cardioSteps.isNotEmpty ? cardioSteps.last.duration : 600;
+                    cardioSteps.add(ExerciseSet(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      duration: lastDuration,
+                      speed: lastSpeed,
+                      incline: lastIncline,
+                    ));
+                  });
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text("Ajouter un palier / une étape", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
         );
 
       case ExerciseType.intervals:
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: setsCount != null && setsCount > 0 ? setsCount.toString() : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Tours / Cycles", hintText: "ex: 8", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onSetsChanged(val == null || val.trim().isEmpty ? 8 : (int.tryParse(val.trim()) ?? 8)),
-                  ),
+                Text(
+                  "Tours & Paliers Fractionné / HIIT :",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: workTime != null && workTime > 0 ? workTime.toString() : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Effort (s)", hintText: "ex: 30", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onWorkTimeChanged(val == null || val.trim().isEmpty ? 30 : (int.tryParse(val.trim()) ?? 30)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: intervalRestTime != null && intervalRestTime > 0 ? intervalRestTime.toString() : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Repos (s)", hintText: "ex: 15", border: OutlineInputBorder(), isDense: true),
-                    validator: (val) => val != null && val.trim().isNotEmpty && int.tryParse(val.trim()) == null ? "Invalide" : null,
-                    onSaved: (val) => onIntervalRestChanged(val == null || val.trim().isEmpty ? 0 : (int.tryParse(val.trim()) ?? 0)),
-                  ),
+                Text(
+                  "Effort, repos, km/h & pente",
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            ...cardioSteps.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final step = entry.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xff22222a),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 11,
+                          backgroundColor: const Color(0xff2563eb).withValues(alpha: 0.2),
+                          child: Text(
+                            "${idx + 1}",
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xff2563eb)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Tour ${idx + 1}",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const Spacer(),
+                        if (cardioSteps.length > 1)
+                          InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                cardioSteps.removeAt(idx);
+                              });
+                            },
+                            child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: (step.workTime > 0 ? step.workTime : 30).toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: "Effort (s)", hintText: "30", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.workTime = int.tryParse(val.trim()) ?? 30;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: (step.intervalRest > 0 ? step.intervalRest : 15).toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: "Repos (s)", hintText: "15", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.intervalRest = int.tryParse(val.trim()) ?? 15;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: step.speed > 0 ? step.speed.toStringAsFixed(1).replaceAll('.0', '') : '',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Vitesse (km/h)", hintText: "12.0", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.speed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: step.incline > 0 ? step.incline.toStringAsFixed(1).replaceAll('.0', '') : '',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Pente (%)", hintText: "0.0", border: OutlineInputBorder(), isDense: true),
+                            onChanged: (val) {
+                              step.incline = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xff2563eb),
+                  side: const BorderSide(color: Color(0xff2563eb)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () {
+                  setDialogState(() {
+                    int lastWork = cardioSteps.isNotEmpty ? cardioSteps.last.workTime : 30;
+                    int lastRest = cardioSteps.isNotEmpty ? cardioSteps.last.intervalRest : 15;
+                    double lastSpeed = cardioSteps.isNotEmpty ? cardioSteps.last.speed : 0.0;
+                    double lastIncline = cardioSteps.isNotEmpty ? cardioSteps.last.incline : 0.0;
+                    cardioSteps.add(ExerciseSet(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      workTime: lastWork,
+                      intervalRest: lastRest,
+                      speed: lastSpeed,
+                      incline: lastIncline,
+                    ));
+                  });
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text("Ajouter un tour / intervalle", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
         );
@@ -1602,7 +1863,8 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
   void _showCreateExerciseDialog(BuildContext context, WorkoutProvider provider, StateSetter setModalState) {
     final formKey = GlobalKey<FormState>();
     String name = '';
-    List<String> selectedCategories = ['Pectoraux'];
+    List<String> selectedCategories = [];
+
     String notes = '';
     String videoUrl = '';
 
@@ -1621,13 +1883,18 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextFormField(
+                        textCapitalization: TextCapitalization.sentences,
                         decoration: const InputDecoration(
                           labelText: "Nom de l'exercice",
                           border: OutlineInputBorder(),
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? "Requis" : null,
-                        onSaved: (val) => name = val!.trim(),
+                        onSaved: (val) {
+                          final trimmed = val!.trim();
+                          name = trimmed.isNotEmpty ? (trimmed[0].toUpperCase() + trimmed.substring(1)) : trimmed;
+                        },
                       ),
+
                       const SizedBox(height: 16),
                       const Text("Catégorie(s) musculaire(s) :", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
@@ -1729,6 +1996,26 @@ String _formatDuration(int totalSeconds) {
   return parts.join(" ");
 }
 
+String _formatCardioStepSummary(ExerciseSet set, {bool isIntervals = false}) {
+  List<String> parts = [];
+  if (isIntervals) {
+    parts.add("${set.workTime}s / ${set.intervalRest}s");
+  } else {
+    if (set.duration > 0) {
+      parts.add(_formatDuration(set.duration));
+    } else if (set.distance > 0) {
+      parts.add("${set.distance.toStringAsFixed(1).replaceAll('.0', '')} km");
+    }
+  }
+  if (set.speed > 0) {
+    parts.add("${set.speed.toStringAsFixed(1).replaceAll('.0', '')}km/h");
+  }
+  if (set.incline > 0) {
+    parts.add("${set.incline.toStringAsFixed(1).replaceAll('.0', '')}%");
+  }
+  return parts.isEmpty ? "Étape" : parts.join(" ");
+}
+
 String _getProgramExerciseSummary(ProgramExercise progEx) {
   switch (progEx.type) {
     case ExerciseType.reps:
@@ -1736,12 +2023,26 @@ String _getProgramExerciseSummary(ProgramExercise progEx) {
     case ExerciseType.isometry:
       return "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)} (Isométrie)";
     case ExerciseType.cardio:
-      if (progEx.distanceTarget > 0) {
-        return "${progEx.setsCount} séries × ${progEx.distanceTarget} km";
+      if (progEx.customSets != null && progEx.customSets!.isNotEmpty) {
+        return progEx.customSets!.map((s) => _formatCardioStepSummary(s)).join(" ➔ ");
       }
-      return "${progEx.setsCount} séries × ${_formatDuration(progEx.durationTarget)} (Cardio)";
+      List<String> cardioMetrics = [];
+      if (progEx.durationTarget > 0) cardioMetrics.add(_formatDuration(progEx.durationTarget));
+      if (progEx.distanceTarget > 0) cardioMetrics.add("${progEx.distanceTarget.toStringAsFixed(1).replaceAll('.0', '')} km");
+      if (progEx.speedTarget > 0) cardioMetrics.add("${progEx.speedTarget.toStringAsFixed(1).replaceAll('.0', '')}km/h");
+      if (progEx.inclineTarget > 0) cardioMetrics.add("${progEx.inclineTarget.toStringAsFixed(1).replaceAll('.0', '')}%");
+
+      String sub = cardioMetrics.isEmpty ? "Cardio" : cardioMetrics.join(" ");
+      return progEx.setsCount > 1 ? "${progEx.setsCount} séries × $sub" : sub;
+
     case ExerciseType.intervals:
-      return "${progEx.setsCount} tours (${progEx.workTime}s effort / ${progEx.intervalRestTime}s repos)";
+      if (progEx.customSets != null && progEx.customSets!.isNotEmpty) {
+        return progEx.customSets!.map((s) => _formatCardioStepSummary(s, isIntervals: true)).join(" ➔ ");
+      }
+      String speedIncline = "";
+      if (progEx.speedTarget > 0) speedIncline += " ${progEx.speedTarget.toStringAsFixed(1).replaceAll('.0', '')}km/h";
+      if (progEx.inclineTarget > 0) speedIncline += " ${progEx.inclineTarget.toStringAsFixed(1).replaceAll('.0', '')}%";
+      return "${progEx.setsCount} tours (${progEx.workTime}s effort / ${progEx.intervalRestTime}s repos$speedIncline)";
     case ExerciseType.amrap:
       return "AMRAP ${_formatDuration(progEx.durationTarget)}";
     case ExerciseType.emom:

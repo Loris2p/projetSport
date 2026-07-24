@@ -240,13 +240,11 @@ class CategoryMultiSelect extends StatelessWidget {
             if (selected) {
               if (!updated.contains(cat)) updated.add(cat);
             } else {
-              // Garder au moins 1 catégorie si possible
-              if (updated.length > 1) {
-                updated.remove(cat);
-              }
+              updated.remove(cat);
             }
             onChanged(updated);
           },
+
         );
       }).toList(),
     );

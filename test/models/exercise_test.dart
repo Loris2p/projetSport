@@ -33,15 +33,16 @@ void main() {
       expect(exercise.category, equals('Jambes'));
     });
 
-    test('Should fallback to default Pectoraux when neither category nor categories provided', () {
+    test('Should fallback to default Autre when neither category nor categories provided', () {
       final exercise = Exercise(
         id: 'ex_3',
         name: 'Exercice Mystère',
       );
 
-      expect(exercise.categories, equals(['Pectoraux']));
-      expect(exercise.category, equals('Pectoraux'));
+      expect(exercise.categories, equals(['Autre']));
+      expect(exercise.category, equals('Autre'));
     });
+
 
     test('Should convert Exercise to JSON and back to Exercise (Roundtrip)', () {
       final original = Exercise(

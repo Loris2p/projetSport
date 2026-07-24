@@ -190,24 +190,47 @@ class WorkoutProvider with ChangeNotifier {
     if (program != null) {
       for (var exercise in program.exercises) {
         final String? exerciseGroupId = exercise.groupId ?? program.exerciseGroups?[exercise.exerciseId];
+        final List<ExerciseSet> generatedSets;
+        if (exercise.customSets != null && exercise.customSets!.isNotEmpty) {
+          generatedSets = exercise.customSets!
+              .map((cs) => ExerciseSet(
+                    id: _uuid.v4(),
+                    type: cs.type,
+                    weight: cs.weight,
+                    reps: cs.reps,
+                    duration: cs.duration,
+                    distance: cs.distance,
+                    speed: cs.speed,
+                    incline: cs.incline,
+                    tempo: cs.tempo,
+                    workTime: cs.workTime,
+                    intervalRest: cs.intervalRest,
+                  ))
+              .toList();
+        } else {
+          generatedSets = List.generate(
+            exercise.setsCount,
+            (_) => ExerciseSet(
+              id: _uuid.v4(),
+              type: SetType.normal,
+              reps: exercise.repsCount,
+              duration: exercise.durationTarget,
+              distance: exercise.distanceTarget,
+              speed: exercise.speedTarget,
+              incline: exercise.inclineTarget,
+              tempo: exercise.tempoCode,
+              workTime: exercise.workTime,
+              intervalRest: exercise.intervalRestTime,
+            ),
+          );
+        }
+
         exercises.add(
           PerformedExercise(
             exerciseId: exercise.exerciseId,
             groupId: exerciseGroupId,
             type: exercise.type,
-            sets: List.generate(
-              exercise.setsCount,
-              (_) => ExerciseSet(
-                id: _uuid.v4(),
-                type: SetType.normal,
-                reps: exercise.repsCount,
-                duration: exercise.durationTarget,
-                distance: exercise.distanceTarget,
-                tempo: exercise.tempoCode,
-                workTime: exercise.workTime,
-                intervalRest: exercise.intervalRestTime,
-              ),
-            ),
+            sets: generatedSets,
           ),
         );
       }
@@ -299,28 +322,31 @@ class WorkoutProvider with ChangeNotifier {
     if (_activeSession == null) return;
     final index = _activeSession!.exercises.indexOf(perfEx);
     if (index >= 0) {
-      String defaultTempo = '2010';
-      SetType defaultType = SetType.normal;
-
       if (perfEx.sets.isNotEmpty) {
         final last = perfEx.sets.last;
-        defaultTempo = last.tempo;
-        defaultType = last.type;
+        perfEx.sets.add(
+          ExerciseSet(
+            id: _uuid.v4(),
+            weight: 0.0,
+            reps: 0,
+            duration: last.duration,
+            distance: last.distance,
+            speed: last.speed,
+            incline: last.incline,
+            tempo: last.tempo,
+            workTime: last.workTime,
+            intervalRest: last.intervalRest,
+            type: last.type,
+          ),
+        );
+      } else {
+        perfEx.sets.add(
+          ExerciseSet(
+            id: _uuid.v4(),
+            type: SetType.normal,
+          ),
+        );
       }
-
-      perfEx.sets.add(
-        ExerciseSet(
-          id: _uuid.v4(),
-          weight: 0.0,
-          reps: 0,
-          duration: 0,
-          distance: 0.0,
-          tempo: defaultTempo,
-          workTime: 0,
-          intervalRest: 0,
-          type: defaultType,
-        ),
-      );
       notifyListeners();
     }
   }
@@ -336,11 +362,22 @@ class WorkoutProvider with ChangeNotifier {
     }
   }
 
-  void updateSetMetrics(ExerciseSet set, double weight, int reps, {SetType? type, int? duration, double? distance}) {
+  void updateSetMetrics(
+    ExerciseSet set,
+    double weight,
+    int reps, {
+    SetType? type,
+    int? duration,
+    double? distance,
+    double? speed,
+    double? incline,
+  }) {
     set.weight = weight;
     set.reps = reps;
     if (duration != null) set.duration = duration;
     if (distance != null) set.distance = distance;
+    if (speed != null) set.speed = speed;
+    if (incline != null) set.incline = incline;
     if (type != null) set.type = type;
     // If it was completed, recheck PRs
     if (set.isCompleted && _activeSession != null) {

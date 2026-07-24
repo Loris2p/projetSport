@@ -34,7 +34,7 @@ void main() {
       expect(ExerciseType.isometry.headers, contains('DURÉE'));
 
       expect(ExerciseType.cardio.label, contains('Cardio'));
-      expect(ExerciseType.cardio.headers, contains('DISTANCE (KM)'));
+      expect(ExerciseType.cardio.headers, contains('DURÉE (MIN)'));
     });
   });
 }

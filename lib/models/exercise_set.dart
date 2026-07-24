@@ -8,6 +8,8 @@ class ExerciseSet {
   SetType type;
   int duration; // Durée en secondes
   double distance; // Distance en kilomètres
+  double speed; // Vitesse en km/h
+  double incline; // Pente en %
   String tempo; // Code tempo ex: "3010"
   int workTime; // Temps d'effort en secondes (pour les séries fractionnées)
   int intervalRest; // Temps de repos inter-intervalle en secondes
@@ -26,6 +28,8 @@ class ExerciseSet {
     this.is1RMPR = false,
     this.duration = 0,
     this.distance = 0.0,
+    this.speed = 0.0,
+    this.incline = 0.0,
     this.tempo = '2010',
     this.workTime = 0,
     this.intervalRest = 0,
@@ -48,6 +52,8 @@ class ExerciseSet {
       'is1RMPR': is1RMPR,
       'duration': duration,
       'distance': distance,
+      'speed': speed,
+      'incline': incline,
       'tempo': tempo,
       'workTime': workTime,
       'intervalRest': intervalRest,
@@ -68,6 +74,8 @@ class ExerciseSet {
       is1RMPR: json['is1RMPR'] as bool? ?? false,
       duration: json['duration'] as int? ?? 0,
       distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
+      speed: (json['speed'] as num?)?.toDouble() ?? 0.0,
+      incline: (json['incline'] as num?)?.toDouble() ?? 0.0,
       tempo: json['tempo'] as String? ?? '2010',
       workTime: json['workTime'] as int? ?? 0,
       intervalRest: json['intervalRest'] as int? ?? 0,
