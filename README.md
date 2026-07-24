@@ -5,7 +5,8 @@ Une application Flutter moderne pour suivre vos entraînements de musculation, p
 ## 🚀 Fonctionnalités principales
 
 *   **Gestion des séances** : Planification de programmes (ex: Push, Pull, Legs) et historique complet des séances réalisées.
-*   **Persistance locale** : Utilise le package `localstore` pour une base de données locale NoSQL légère, cloisonnée par utilisateur (démarre avec une base de données propre et vide).
+*   **Persistance Cloud & Cache** : Utilise **Firebase Firestore** pour une synchronisation multi-appareils (Android, iOS, Web, Desktop) avec gestion de cache local synchrone.
+*   **Suivi des Records (PR)** : Gestion et stockage dédiés des records personnels (Charge Max et 1RM estimé) pour chaque exercice.
 *   **Synchronisation Santé** : Intégration prévue pour synchroniser les entraînements avec Google Fit / Health Connect (Android) et Apple Health (iOS).
 
 ---
@@ -30,6 +31,7 @@ erDiagram
 
     COLLECTION_USERS ||--o{ COLLECTION_PROGRAMS : "contient (sous-collection)"
     COLLECTION_USERS ||--o{ COLLECTION_SESSIONS : "contient (sous-collection)"
+    COLLECTION_USERS ||--o{ COLLECTION_RECORDS : "contient (sous-collection)"
 
     COLLECTION_PROGRAMS {
         string id PK
@@ -48,6 +50,15 @@ erDiagram
         list exercises "Liste de PerformedExercise"
         double activeCaloriesBurned
         double averageHeartRate
+    }
+
+    COLLECTION_RECORDS {
+        string exerciseId PK
+        double maxWeight
+        double max1RM
+        string maxWeightDate
+        string max1RMDate
+        string updatedAt
     }
 
     PERFORMED_EXERCISE {
@@ -78,6 +89,7 @@ erDiagram
 1. **`exercises` (Collection Racine)** : Contient tous les exercices disponibles. Les exercices publics (communs à tous) possèdent `isCustom: false`. Les exercices privés ont `isCustom: true` et sont filtrés par le champ `ownerId == userId`.
 2. **`users/{userId}/programs` (Sous-collection)** : Contient les routines/programmes d'entraînement personnalisés de l'utilisateur.
 3. **`users/{userId}/sessions` (Sous-collection)** : Contient l'historique complet des séances réalisées par l'utilisateur. Chaque séance stocke ses exercices effectués, ses séries (`ExerciseSet`) de manière dénormalisée, ainsi que les données énergétiques et cardiaques issues de la synchronisation de santé.
+4. **`users/{userId}/records` (Sous-collection)** : Contient les records personnels (PRs de charge maximale et 1RM estimé) pour chaque exercice de l'utilisateur.
 
 ---
 
