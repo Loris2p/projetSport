@@ -889,6 +889,7 @@ class ActiveSessionScreen extends StatelessWidget {
       ),
       builder: (ctx) {
         String searchQuery = '';
+        bool isGridView = false;
         return StatefulBuilder(
           builder: (context, setStateSheet) {
             final filtered = provider.exercises.where((e) {
@@ -905,9 +906,23 @@ class ActiveSessionScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 12),
                     Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[700], borderRadius: BorderRadius.circular(2))),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      child: Text("Ajouter un exercice", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Ajouter un exercice", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          IconButton(
+                            icon: Icon(isGridView ? Icons.view_list : Icons.grid_view, color: const Color(0xff2563eb)),
+                            tooltip: isGridView ? "Vue Liste" : "Vue Grille (3 colonnes)",
+                            onPressed: () {
+                              setStateSheet(() {
+                                isGridView = !isGridView;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -926,30 +941,104 @@ class ActiveSessionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final ex = filtered[index];
-                          final isAdded = provider.activeSession?.exercises.any((pe) => pe.exerciseId == ex.id) ?? false;
+                      child: isGridView
+                          ? GridView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 0.82,
+                              ),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final ex = filtered[index];
+                                final isAdded = provider.activeSession?.exercises.any((pe) => pe.exerciseId == ex.id) ?? false;
+                                final mainCat = ex.categories.isNotEmpty ? ex.categories.first : ex.category;
+                                final catInfo = CategoryHelper.getInfo(mainCat);
 
-                          return ListTile(
-                            title: Text(ex.name),
-                            subtitle: Text(ex.category),
-                            trailing: isAdded
-                                ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
-                                : const Icon(Icons.add_circle_outline),
-                            onTap: () {
-                              if (!isAdded) {
-                                provider.addExerciseToActiveSession(ex);
-                              } else {
-                                provider.removeExerciseFromActiveSession(ex.id);
-                              }
-                              setStateSheet(() {}); // trigger rebuild inside sheet
-                            },
-                          );
-                        },
-                      ),
+                                return InkWell(
+                                  onTap: () {
+                                    if (!isAdded) {
+                                      provider.addExerciseToActiveSession(ex);
+                                    } else {
+                                      provider.removeExerciseFromActiveSession(ex.id);
+                                    }
+                                    setStateSheet(() {});
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Card(
+                                    margin: EdgeInsets.zero,
+                                    color: isAdded ? const Color(0xff1e293b) : const Color(0xff1e1e24),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: isAdded
+                                          ? const BorderSide(color: Color(0xff2563eb), width: 1.5)
+                                          : BorderSide(color: catInfo.color.withValues(alpha: 0.3), width: 1),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(7.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Icon(catInfo.icon, size: 13, color: catInfo.color),
+                                              Icon(
+                                                isAdded ? Icons.check_circle : Icons.add_circle_outline,
+                                                size: 16,
+                                                color: const Color(0xff2563eb),
+                                              ),
+                                            ],
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            ex.name,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            mainCat,
+                                            style: TextStyle(fontSize: 9, color: catInfo.color, fontWeight: FontWeight.w600),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const Spacer(),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final ex = filtered[index];
+                                final isAdded = provider.activeSession?.exercises.any((pe) => pe.exerciseId == ex.id) ?? false;
+
+                                return ListTile(
+                                  title: Text(ex.name),
+                                  subtitle: Text(ex.category),
+                                  trailing: isAdded
+                                      ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
+                                      : const Icon(Icons.add_circle_outline),
+                                  onTap: () {
+                                    if (!isAdded) {
+                                      provider.addExerciseToActiveSession(ex);
+                                    } else {
+                                      provider.removeExerciseFromActiveSession(ex.id);
+                                    }
+                                    setStateSheet(() {}); // trigger rebuild inside sheet
+                                  },
+                                );
+                              },
+                            ),
                     ),
                   ],
                 );

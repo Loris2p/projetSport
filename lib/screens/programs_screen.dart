@@ -1653,6 +1653,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
+        bool isGridView = false;
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             final filtered = allExercises.where((ex) {
@@ -1701,13 +1702,26 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                               ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 26),
-                            tooltip: "Créer un exercice",
-                            onPressed: () {
-                              final provider = Provider.of<WorkoutProvider>(context, listen: false);
-                              _showCreateExerciseDialog(context, provider, setModalState);
-                            },
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(isGridView ? Icons.view_list : Icons.grid_view, color: const Color(0xff2563eb)),
+                                tooltip: isGridView ? "Vue Liste" : "Vue Grille (3 colonnes)",
+                                onPressed: () {
+                                  setModalState(() {
+                                    isGridView = !isGridView;
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 26),
+                                tooltip: "Créer un exercice",
+                                onPressed: () {
+                                  final provider = Provider.of<WorkoutProvider>(context, listen: false);
+                                  _showCreateExerciseDialog(context, provider, setModalState);
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1777,7 +1791,7 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Available Exercises List
+                      // Available Exercises List / Grid
                       Expanded(
                         child: filtered.isEmpty
                             ? Center(
@@ -1786,110 +1800,198 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                   style: TextStyle(color: Colors.grey[500]),
                                 ),
                               )
-                            : ListView.builder(
-                                controller: scrollController,
-                                itemCount: filtered.length,
-                                itemBuilder: (context, index) {
-                                  final ex = filtered[index];
-                                  final addedCount = _selectedExercises.where((e) => e.exerciseId == ex.id).length;
-                                  final isAlreadySelected = addedCount > 0;
-
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(vertical: 4.0),
-                                    color: isAlreadySelected ? const Color(0xff1e293b) : const Color(0xff1e1e24),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      side: isAlreadySelected
-                                          ? const BorderSide(color: Color(0xff2563eb), width: 1.2)
-                                          : BorderSide.none,
+                            : isGridView
+                                ? GridView.builder(
+                                    controller: scrollController,
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 0.82,
                                     ),
-                                    child: ListTile(
-                                      title: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              ex.name,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                    itemCount: filtered.length,
+                                    itemBuilder: (context, index) {
+                                      final ex = filtered[index];
+                                      final addedCount = _selectedExercises.where((e) => e.exerciseId == ex.id).length;
+                                      final isAlreadySelected = addedCount > 0;
+                                      final mainCat = ex.categories.isNotEmpty ? ex.categories.first : ex.category;
+                                      final catInfo = CategoryHelper.getInfo(mainCat);
+
+                                      return InkWell(
+                                        onTap: () {
+                                          _showConfigureExerciseTargetDialog(
+                                            context: context,
+                                            ex: ex,
+                                            initialSettings: null,
+                                            onConfirm: (configuredProgEx) {
+                                              setState(() {
+                                                _selectedExercises.add(configuredProgEx);
+                                              });
+                                              setModalState(() {});
+                                            },
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Card(
+                                          margin: EdgeInsets.zero,
+                                          color: isAlreadySelected ? const Color(0xff1e293b) : const Color(0xff1e1e24),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            side: isAlreadySelected
+                                                ? const BorderSide(color: Color(0xff2563eb), width: 1.5)
+                                                : BorderSide(color: catInfo.color.withValues(alpha: 0.3), width: 1),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(7.0),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Icon(catInfo.icon, size: 13, color: catInfo.color),
+                                                    if (addedCount > 0)
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xff2563eb),
+                                                          borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                        child: Text(
+                                                          "x$addedCount",
+                                                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                                        ),
+                                                      )
+                                                    else
+                                                      const Icon(Icons.add_circle_outline, size: 16, color: Color(0xff2563eb)),
+                                                  ],
+                                                ),
+                                                const Spacer(),
+                                                Text(
+                                                  ex.name,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  mainCat,
+                                                  style: TextStyle(fontSize: 9, color: catInfo.color, fontWeight: FontWeight.w600),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const Spacer(),
+                                              ],
                                             ),
                                           ),
-                                          if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty) ...[
-                                            const SizedBox(width: 4),
-                                            GestureDetector(
-                                              onTap: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
-                                              child: const Icon(Icons.play_circle_fill, color: Colors.red, size: 18),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      subtitle: Padding(
-                                        padding: const EdgeInsets.only(top: 4.0),
-                                        child: MultiCategoryBadges(categories: ex.categories, compact: true),
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (addedCount > 0) ...[
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xff2563eb).withValues(alpha: 0.2),
-                                                borderRadius: BorderRadius.circular(12),
-                                                border: Border.all(color: const Color(0xff2563eb)),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : ListView.builder(
+                                    controller: scrollController,
+                                    itemCount: filtered.length,
+                                    itemBuilder: (context, index) {
+                                      final ex = filtered[index];
+                                      final addedCount = _selectedExercises.where((e) => e.exerciseId == ex.id).length;
+                                      final isAlreadySelected = addedCount > 0;
+
+                                      return Card(
+                                        margin: const EdgeInsets.symmetric(vertical: 4.0),
+                                        color: isAlreadySelected ? const Color(0xff1e293b) : const Color(0xff1e1e24),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          side: isAlreadySelected
+                                              ? const BorderSide(color: Color(0xff2563eb), width: 1.2)
+                                              : BorderSide.none,
+                                        ),
+                                        child: ListTile(
+                                          title: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  ex.name,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                                ),
                                               ),
-                                              child: Text(
-                                                "x$addedCount",
-                                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 2),
-                                            IconButton(
-                                              icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 22),
-                                              tooltip: "Ajouter une autre occurrence",
-                                              onPressed: () {
-                                                _showConfigureExerciseTargetDialog(
-                                                  context: context,
-                                                  ex: ex,
-                                                  initialSettings: null,
-                                                  onConfirm: (configuredProgEx) {
+                                              if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty) ...[
+                                                const SizedBox(width: 4),
+                                                GestureDetector(
+                                                  onTap: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                                                  child: const Icon(Icons.play_circle_fill, color: Colors.red, size: 18),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          subtitle: Padding(
+                                            padding: const EdgeInsets.only(top: 4.0),
+                                            child: MultiCategoryBadges(categories: ex.categories, compact: true),
+                                          ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (addedCount > 0) ...[
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xff2563eb).withValues(alpha: 0.2),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    border: Border.all(color: const Color(0xff2563eb)),
+                                                  ),
+                                                  child: Text(
+                                                    "x$addedCount",
+                                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 2),
+                                                IconButton(
+                                                  icon: const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 22),
+                                                  tooltip: "Ajouter une autre occurrence",
+                                                  onPressed: () {
+                                                    _showConfigureExerciseTargetDialog(
+                                                      context: context,
+                                                      ex: ex,
+                                                      initialSettings: null,
+                                                      onConfirm: (configuredProgEx) {
+                                                        setState(() {
+                                                          _selectedExercises.add(configuredProgEx);
+                                                        });
+                                                        setModalState(() {});
+                                                      },
+                                                    );
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                                  tooltip: "Retirer toutes les occurrences",
+                                                  onPressed: () {
                                                     setState(() {
-                                                      _selectedExercises.add(configuredProgEx);
+                                                      _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
                                                     });
                                                     setModalState(() {});
                                                   },
-                                                );
-                                              },
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                                              tooltip: "Retirer toutes les occurrences",
-                                              onPressed: () {
+                                                ),
+                                              ] else
+                                                const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 24),
+                                            ],
+                                          ),
+                                          onTap: () {
+                                            _showConfigureExerciseTargetDialog(
+                                              context: context,
+                                              ex: ex,
+                                              initialSettings: null,
+                                              onConfirm: (configuredProgEx) {
                                                 setState(() {
-                                                  _selectedExercises.removeWhere((e) => e.exerciseId == ex.id);
+                                                  _selectedExercises.add(configuredProgEx);
                                                 });
                                                 setModalState(() {});
                                               },
-                                            ),
-                                          ] else
-                                            const Icon(Icons.add_circle_outline, color: Color(0xff2563eb), size: 24),
-                                        ],
-                                      ),
-                                      onTap: () {
-                                        _showConfigureExerciseTargetDialog(
-                                          context: context,
-                                          ex: ex,
-                                          initialSettings: null,
-                                          onConfirm: (configuredProgEx) {
-                                            setState(() {
-                                              _selectedExercises.add(configuredProgEx);
-                                            });
-                                            setModalState(() {});
+                                            );
                                           },
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(

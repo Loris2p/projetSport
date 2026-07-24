@@ -87,23 +87,9 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
           Expanded(
-            child: Stack(
-              children: [
-                // Screen contents
-                IndexedStack(
-                  index: _currentIndex,
-                  children: _screens,
-                ),
-                
-                // Persistent floating Active Workout Bar
-                if (activeSession != null)
-                  Positioned(
-                    left: 12,
-                    right: 12,
-                    bottom: 8,
-                    child: _buildActiveWorkoutBar(context, provider),
-                  ),
-              ],
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
             ),
           ),
         ],
@@ -113,45 +99,47 @@ class _MainShellState extends State<MainShell> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AdBannerWidget(),
-            Container(
-              padding: EdgeInsets.only(bottom: activeSession != null ? 70.0 : 0.0),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                type: BottomNavigationBarType.fixed,
-                onTap: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.dashboard_outlined),
-                    activeIcon: Icon(Icons.dashboard),
-                    label: "Tableau de bord",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.assignment_outlined),
-                    activeIcon: Icon(Icons.assignment),
-                    label: "Programmes",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.history_outlined),
-                    activeIcon: Icon(Icons.history),
-                    label: "Historique",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.show_chart_outlined),
-                    activeIcon: Icon(Icons.show_chart),
-                    label: "Stats",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.fitness_center_outlined),
-                    activeIcon: Icon(Icons.fitness_center),
-                    label: "Exercices",
-                  ),
-                ],
+            if (activeSession != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                child: _buildActiveWorkoutBar(context, provider),
               ),
+            const AdBannerWidget(),
+            BottomNavigationBar(
+              currentIndex: _currentIndex,
+              type: BottomNavigationBarType.fixed,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard_outlined),
+                  activeIcon: Icon(Icons.dashboard),
+                  label: "Tableau de bord",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.assignment_outlined),
+                  activeIcon: Icon(Icons.assignment),
+                  label: "Programmes",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_outlined),
+                  activeIcon: Icon(Icons.history),
+                  label: "Historique",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.show_chart_outlined),
+                  activeIcon: Icon(Icons.show_chart),
+                  label: "Stats",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.fitness_center_outlined),
+                  activeIcon: Icon(Icons.fitness_center),
+                  label: "Exercices",
+                ),
+              ],
             ),
           ],
         ),

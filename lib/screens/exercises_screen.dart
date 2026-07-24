@@ -16,6 +16,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'Tous';
 
+  bool _isGridView = false;
+
   @override
   Widget build(BuildContext context) {
     final workoutProvider = Provider.of<WorkoutProvider>(context);
@@ -37,6 +39,15 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
       appBar: AppBar(
         title: const Text("Exercices"),
         actions: [
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view, color: const Color(0xff2563eb)),
+            tooltip: _isGridView ? "Afficher en liste" : "Afficher en grille (3 colonnes)",
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add, color: Color(0xff2563eb)),
             onPressed: () => _showExerciseDialog(context, null, workoutProvider),
@@ -109,7 +120,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
 
           const SizedBox(height: 8),
 
-          // Exercises List
+          // Exercises List / Grid
           Expanded(
             child: filteredExercises.isEmpty
                 ? Center(
@@ -118,90 +129,173 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       style: TextStyle(color: Colors.grey[500]),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    itemCount: filteredExercises.length,
-                    itemBuilder: (context, index) {
-                      final ex = filteredExercises[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 10.0),
-                        child: ListTile(
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  ex.name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              if (!ex.isCustom)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    "Public",
-                                    style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xff2563eb).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    "Privé",
-                                    style: TextStyle(fontSize: 9, color: Color(0xff2563eb), fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 6),
-                              MultiCategoryBadges(categories: ex.categories, compact: true),
-                              if (ex.notes != null && ex.notes!.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  ex.notes!,
-                                  style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty)
-                                IconButton(
-                                  icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 24),
-                                  tooltip: "Voir la vidéo d'explication",
-                                  onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
-                                ),
-                              if (ex.isCustom) ...[
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20),
-                                  onPressed: () => _showExerciseDialog(context, ex, workoutProvider),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                                  onPressed: () => _showDeleteConfirm(context, ex, workoutProvider),
-                                ),
-                              ] else if (ex.videoUrl == null || ex.videoUrl!.trim().isEmpty)
-                                const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
-                            ],
-                          ),
+                : _isGridView
+                    ? GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.82,
                         ),
-                      );
-                    },
-                  ),
+                        itemCount: filteredExercises.length,
+                        itemBuilder: (context, index) {
+                          final ex = filteredExercises[index];
+                          final mainCat = ex.categories.isNotEmpty ? ex.categories.first : ex.category;
+                          final catInfo = CategoryHelper.getInfo(mainCat);
+
+                          return Card(
+                            margin: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: catInfo.color.withValues(alpha: 0.3), width: 1),
+                            ),
+                            color: const Color(0xff1e1e24),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Icon(catInfo.icon, size: 14, color: catInfo.color),
+                                      if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty)
+                                        GestureDetector(
+                                          onTap: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                                          child: const Icon(Icons.play_circle_fill, color: Colors.red, size: 16),
+                                        )
+                                      else if (ex.isCustom)
+                                        PopupMenuButton<String>(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.more_vert, size: 16, color: Colors.grey),
+                                          onSelected: (val) {
+                                            if (val == 'edit') {
+                                              _showExerciseDialog(context, ex, workoutProvider);
+                                            } else if (val == 'delete') {
+                                              _showDeleteConfirm(context, ex, workoutProvider);
+                                            }
+                                          },
+                                          itemBuilder: (ctx) => [
+                                            const PopupMenuItem(value: 'edit', child: Text("Modifier", style: TextStyle(fontSize: 12))),
+                                            const PopupMenuItem(value: 'delete', child: Text("Supprimer", style: TextStyle(fontSize: 12, color: Colors.redAccent))),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    ex.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: catInfo.color.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      mainCat,
+                                      style: TextStyle(fontSize: 9, color: catInfo.color, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        itemCount: filteredExercises.length,
+                        itemBuilder: (context, index) {
+                          final ex = filteredExercises[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 10.0),
+                            child: ListTile(
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      ex.name,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  if (!ex.isCustom)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        "Public",
+                                        style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold),
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xff2563eb).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        "Privé",
+                                        style: TextStyle(fontSize: 9, color: Color(0xff2563eb), fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 6),
+                                  MultiCategoryBadges(categories: ex.categories, compact: true),
+                                  if (ex.notes != null && ex.notes!.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      ex.notes!,
+                                      style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (ex.videoUrl != null && ex.videoUrl!.trim().isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.play_circle_fill, color: Colors.red, size: 24),
+                                      tooltip: "Voir la vidéo d'explication",
+                                      onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
+                                    ),
+                                  if (ex.isCustom) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 20),
+                                      onPressed: () => _showExerciseDialog(context, ex, workoutProvider),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                                      onPressed: () => _showDeleteConfirm(context, ex, workoutProvider),
+                                    ),
+                                  ] else if (ex.videoUrl == null || ex.videoUrl!.trim().isEmpty)
+                                    const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
