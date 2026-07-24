@@ -188,14 +188,31 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 15),
 
-              // Quick Resume Shortcut (if program exists)
-              if (quickProgram != null) ...[
+              // Quick Shortcut (Active Session vs Launch Program)
+              if (workoutProvider.activeSession != null) ...[
                 _buildActionCard(
                   context: buildContext,
-                  title: "Reprendre : ${quickProgram.name}",
-                  subtitle: quickProgram.description,
+                  title: "Continuer : ${workoutProvider.activeSession!.name}",
+                  subtitle: "Une séance d'entraînement est actuellement en cours",
+                  icon: Icons.play_circle_fill,
+                  gradientColors: const [Color(0xff2563eb), Color(0xff1d4ed8)],
+                  onTap: () {
+                    Navigator.push(
+                      buildContext,
+                      MaterialPageRoute(builder: (_) => const ActiveSessionScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 15),
+              ] else if (quickProgram != null) ...[
+                _buildActionCard(
+                  context: buildContext,
+                  title: "Lancer : ${quickProgram.name}",
+                  subtitle: quickProgram.description.isNotEmpty
+                      ? quickProgram.description
+                      : "Démarrer rapidement ce programme",
                   icon: Icons.play_arrow_rounded,
-                  gradientColors: [Color(0xff1e1e24), Color(0xff2d2d34)],
+                  gradientColors: const [Color(0xff1e1e24), Color(0xff2d2d34)],
                   onTap: () {
                     workoutProvider.startSession(quickProgram);
                     Navigator.push(
