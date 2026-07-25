@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -12,19 +12,18 @@ class NotificationService {
   factory NotificationService() => _instance ??= NotificationService._internal();
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin? _notificationsPlugin;
   bool _isInitialized = false;
   static const int _restTimerNotificationId = 888;
   static const int _restFinishedNotificationId = 889;
 
   Future<void> init() async {
     if (_isInitialized) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
 
     try {
-      if (!kIsWeb) {
-        tz.initializeTimeZones();
-      }
+      _notificationsPlugin ??= FlutterLocalNotificationsPlugin();
+      tz.initializeTimeZones();
 
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -36,17 +35,12 @@ class NotificationService {
         requestSoundPermission: true,
       );
 
-      const LinuxInitializationSettings initializationSettingsLinux =
-          LinuxInitializationSettings(defaultActionName: 'Open notification');
-
       const InitializationSettings initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
         iOS: initializationSettingsDarwin,
-        macOS: initializationSettingsDarwin,
-        linux: initializationSettingsLinux,
       );
 
-      await _notificationsPlugin.initialize(settings: initializationSettings);
+      await _notificationsPlugin!.initialize(settings: initializationSettings);
       _isInitialized = true;
       await requestPermissions();
     } catch (e) {
@@ -55,16 +49,16 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
-    if (kIsWeb) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     try {
       if (Platform.isAndroid) {
         final androidImplementation =
-            _notificationsPlugin.resolvePlatformSpecificImplementation<
+            _notificationsPlugin?.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         await androidImplementation?.requestNotificationsPermission();
-      } else if (Platform.isIOS || Platform.isMacOS) {
+      } else if (Platform.isIOS) {
         final iosImplementation =
-            _notificationsPlugin.resolvePlatformSpecificImplementation<
+            _notificationsPlugin?.resolvePlatformSpecificImplementation<
                 IOSFlutterLocalNotificationsPlugin>();
         await iosImplementation?.requestPermissions(
           alert: true,
@@ -82,8 +76,9 @@ class NotificationService {
     required int remainingSeconds,
     required DateTime endTime,
   }) async {
-    if (kIsWeb) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     if (!_isInitialized) await init();
+    if (_notificationsPlugin == null) return;
 
     try {
       final androidDetails = AndroidNotificationDetails(
@@ -118,7 +113,7 @@ class NotificationService {
           ? "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}"
           : "${seconds}s";
 
-      await _notificationsPlugin.show(
+      await _notificationsPlugin!.show(
         id: _restTimerNotificationId,
         title: '⏱️ Repos en cours',
         body: 'Temps restant: $timeStr',
@@ -134,11 +129,12 @@ class NotificationService {
 
   /// Schedule notification when timer finishes in background
   Future<void> scheduleRestFinishedNotification(DateTime endTime) async {
-    if (kIsWeb) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     if (!_isInitialized) await init();
+    if (_notificationsPlugin == null) return;
 
     try {
-      await _notificationsPlugin.cancel(id: _restFinishedNotificationId);
+      await _notificationsPlugin!.cancel(id: _restFinishedNotificationId);
 
       const androidDetails = AndroidNotificationDetails(
         'rest_finished_channel',
@@ -164,7 +160,7 @@ class NotificationService {
 
       final scheduledDate = tz.TZDateTime.from(endTime, tz.local);
       if (scheduledDate.isAfter(tz.TZDateTime.now(tz.local))) {
-        await _notificationsPlugin.zonedSchedule(
+        await _notificationsPlugin!.zonedSchedule(
           id: _restFinishedNotificationId,
           title: '💪 Temps de repos terminé !',
           body: 'C\'est l\'heure d\'attaquer la série suivante !',
@@ -180,10 +176,11 @@ class NotificationService {
 
   /// Cancel active rest notifications
   Future<void> cancelRestTimerNotification() async {
-    if (kIsWeb) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    if (_notificationsPlugin == null) return;
     try {
-      await _notificationsPlugin.cancel(id: _restTimerNotificationId);
-      await _notificationsPlugin.cancel(id: _restFinishedNotificationId);
+      await _notificationsPlugin!.cancel(id: _restTimerNotificationId);
+      await _notificationsPlugin!.cancel(id: _restFinishedNotificationId);
     } catch (e) {
       debugPrint("Error cancelling rest notification: $e");
     }
@@ -191,11 +188,12 @@ class NotificationService {
 
   /// Notify immediately when rest timer finishes (vibration + notification)
   Future<void> notifyRestFinished() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     await cancelRestTimerNotification();
     await triggerVibration();
 
-    if (kIsWeb) return;
     if (!_isInitialized) await init();
+    if (_notificationsPlugin == null) return;
 
     try {
       const androidDetails = AndroidNotificationDetails(
@@ -220,7 +218,7 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      await _notificationsPlugin.show(
+      await _notificationsPlugin!.show(
         id: _restFinishedNotificationId,
         title: '💪 Temps de repos terminé !',
         body: 'C\'est l\'heure d\'attaquer la série suivante !',
@@ -234,7 +232,7 @@ class NotificationService {
   /// Trigger vibration feedback
   Future<void> triggerVibration() async {
     try {
-      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      if (Platform.isAndroid || Platform.isIOS) {
         bool? hasVibrator = await Vibration.hasVibrator();
         if (hasVibrator == true) {
           await Vibration.vibrate(pattern: [0, 400, 200, 400, 200, 600]);

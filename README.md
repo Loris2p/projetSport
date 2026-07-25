@@ -5,7 +5,7 @@ Une application Flutter moderne pour suivre vos entraînements de musculation, p
 ## 🚀 Fonctionnalités principales
 
 *   **Gestion des séances** : Planification de programmes (ex: Push, Pull, Legs) et historique complet des séances réalisées.
-*   **Persistance Cloud & Cache** : Utilise **Firebase Firestore** pour une synchronisation multi-appareils (Android, iOS, Web, Desktop) avec gestion de cache local synchrone.
+*   **Persistance Cloud & Cache** : Utilise **Firebase Firestore** pour une synchronisation mobile (Android, iOS) avec gestion de cache local synchrone.
 *   **Suivi des Records (PR)** : Gestion et stockage dédiés des records personnels (Charge Max et 1RM estimé) pour chaque exercice.
 *   **Synchronisation Santé** : Intégration prévue pour synchroniser les entraînements avec Google Fit / Health Connect (Android) et Apple Health (iOS).
 
@@ -13,7 +13,7 @@ Une application Flutter moderne pour suivre vos entraînements de musculation, p
 
 ## 🗄️ Structure de la Base de Données (NoSQL)
 
-L'application utilise **Firebase Firestore**, une base de données NoSQL hébergée dans le cloud et synchronisée. Les données sont cloisonnées par utilisateur au sein de collections de documents. Pour les plateformes Desktop (Windows/Linux), l'intégration se fait via le package `firedart`, tandis que les versions Mobile (Android/iOS) et Web utilisent le SDK officiel Firebase.
+L'application utilise **Firebase Firestore**, une base de données NoSQL hébergée dans le cloud et synchronisée via le SDK officiel Firebase Mobile. Les données sont cloisonnées par utilisateur au sein de collections de documents.
 
 ### Schéma de données (Modèle NoSQL)
 

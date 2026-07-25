@@ -5,7 +5,10 @@ import '../providers/workout_provider.dart';
 import '../providers/auth_provider.dart';
 import 'active_session_screen.dart';
 
+import '../widgets/workout_calendar_widget.dart';
+
 class DashboardScreen extends StatelessWidget {
+
   const DashboardScreen({super.key});
 
   @override
@@ -159,6 +162,11 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 25),
+
+              // Calendar Card for Retention & Frequency
+              const WorkoutCalendarWidget(),
+
               const SizedBox(height: 30),
 
               // Quick Actions Title

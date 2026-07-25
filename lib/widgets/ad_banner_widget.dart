@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -25,7 +24,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
 
   void _loadAd() {
     // Les bannières AdMob ne sont supportées que sur Android & iOS natif
-    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.currentUser;
@@ -71,7 +70,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
       return const SizedBox.shrink();
     }
 
-    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS) || !_isLoaded || _bannerAd == null) {
+    if ((!Platform.isAndroid && !Platform.isIOS) || !_isLoaded || _bannerAd == null) {
       return const SizedBox.shrink();
     }
 

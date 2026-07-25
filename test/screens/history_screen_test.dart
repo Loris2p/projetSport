@@ -65,7 +65,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Historique'), findsOneWidget);
-      expect(find.text('Séance Push Réalisée'), findsOneWidget);
+
+      final sessionFinder = find.text('Séance Push Réalisée');
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+
+      expect(sessionFinder, findsOneWidget);
     });
 
     testWidgets('Should display empty message when history is empty', (WidgetTester tester) async {

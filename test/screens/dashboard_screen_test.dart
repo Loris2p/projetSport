@@ -67,7 +67,11 @@ void main() {
 
         expect(workoutProvider.activeSession, isNull);
 
-        await tester.tap(find.text('Nouvelle Séance Vide'));
+        final btnFinder = find.text('Nouvelle Séance Vide');
+        await tester.ensureVisible(btnFinder);
+        await tester.pumpAndSettle();
+
+        await tester.tap(btnFinder);
         await tester.pumpAndSettle();
 
         expect(workoutProvider.activeSession, isNotNull);

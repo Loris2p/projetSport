@@ -43,7 +43,6 @@ dependencies:
   firebase_core: ^4.11.0
   firebase_auth: ^6.5.4
   cloud_firestore: ^6.6.0
-  firedart: ^0.9.8
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.1
   youtube_player_iframe: ^6.0.2

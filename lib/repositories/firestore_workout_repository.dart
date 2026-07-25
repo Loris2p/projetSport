@@ -1,7 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart' as fb_store;
-import 'package:firedart/firedart.dart' as fd;
 import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
@@ -9,8 +7,6 @@ import '../models/personal_record.dart';
 import 'workout_repository.dart';
 
 class FirestoreWorkoutRepository implements WorkoutRepository {
-  bool get isDesktopNative => !kIsWeb && (Platform.isLinux || Platform.isWindows);
-
   fb_store.FirebaseFirestore get _firestore => fb_store.FirebaseFirestore.instance;
   String? _userId;
 
@@ -46,143 +42,73 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
     final List<Exercise> loadedExercises = [];
 
-    if (isDesktopNative) {
-      // 1. Charger les exercices publics (isCustom == false)
-      final publicQuery = await fd.Firestore.instance
+    // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur)
+    // Exercices publics (isCustom == false)
+    final publicQuery = await _firestore
+        .collection('exercises')
+        .where('isCustom', isEqualTo: false)
+        .get();
+
+    loadedExercises.addAll(
+      publicQuery.docs
+          .map((doc) => Exercise.fromJson(doc.data()))
+          .toList(),
+    );
+
+    // Si l'utilisateur n'est pas l'administrateur par défaut, charger également ses exercices personnalisés
+    if (_userId != 'admin_uid_global') {
+      final privateQuery = await _firestore
           .collection('exercises')
-          .where('isCustom', isEqualTo: false)
+          .where('isCustom', isEqualTo: true)
+          .where('ownerId', isEqualTo: _userId)
           .get();
 
-      loadedExercises.addAll(
-        publicQuery
-            .map((doc) => Exercise.fromJson(doc.map))
-            .toList(),
-      );
+      final privateExercises = privateQuery.docs
+          .map((doc) => Exercise.fromJson(doc.data()))
+          .toList();
 
-      // Si l'utilisateur n'est pas l'administrateur par défaut, charger également ses exercices personnalisés
-      if (_userId != 'admin_uid_global') {
-        final privateQuery = await fd.Firestore.instance
-            .collection('exercises')
-            .where('ownerId', isEqualTo: _userId)
-            .get();
-
-        final privateExercises = privateQuery
-            .map((doc) => Exercise.fromJson(doc.map))
-            .where((ex) => ex.isCustom == true)
-            .toList();
-
-        for (var ex in privateExercises) {
-          if (!loadedExercises.any((e) => e.id == ex.id)) {
-            loadedExercises.add(ex);
-          }
+      for (var ex in privateExercises) {
+        if (!loadedExercises.any((e) => e.id == ex.id)) {
+          loadedExercises.add(ex);
         }
       }
-
-      _exercises = loadedExercises;
-
-      // 2. Charger les programmes
-      final programsQuery = await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('programs')
-          .get();
-
-      _programs = programsQuery
-          .map((doc) => WorkoutProgram.fromJson(doc.map))
-          .toList();
-
-      // 3. Charger les séances (historique)
-      final sessionsQuery = await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('sessions')
-          .get();
-
-      _sessions = sessionsQuery
-          .map((doc) => WorkoutSession.fromJson(doc.map))
-          .toList();
-      _sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
-
-      // 4. Charger les records personnels (PRs)
-      final recordsQuery = await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('records')
-          .get();
-
-      _records = recordsQuery
-          .map((doc) => PersonalRecord.fromJson(doc.map))
-          .toList();
-
-    } else {
-      // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur)
-      // Exercices publics (isCustom == false)
-      final publicQuery = await _firestore
-          .collection('exercises')
-          .where('isCustom', isEqualTo: false)
-          .get();
-
-      loadedExercises.addAll(
-        publicQuery.docs
-            .map((doc) => Exercise.fromJson(doc.data()))
-            .toList(),
-      );
-
-      // Si l'utilisateur n'est pas l'administrateur par défaut, charger également ses exercices personnalisés
-      if (_userId != 'admin_uid_global') {
-        final privateQuery = await _firestore
-            .collection('exercises')
-            .where('isCustom', isEqualTo: true)
-            .where('ownerId', isEqualTo: _userId)
-            .get();
-
-        final privateExercises = privateQuery.docs
-            .map((doc) => Exercise.fromJson(doc.data()))
-            .toList();
-
-        for (var ex in privateExercises) {
-          if (!loadedExercises.any((e) => e.id == ex.id)) {
-            loadedExercises.add(ex);
-          }
-        }
-      }
-
-      _exercises = loadedExercises;
-
-      // 2. Charger les programmes
-      final programsQuery = await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('programs')
-          .get();
-
-      _programs = programsQuery.docs
-          .map((doc) => WorkoutProgram.fromJson(doc.data()))
-          .toList();
-
-      // 3. Charger les séances (historique)
-      final sessionsQuery = await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('sessions')
-          .orderBy('startTime', descending: true)
-          .get();
-
-      _sessions = sessionsQuery.docs
-          .map((doc) => WorkoutSession.fromJson(doc.data()))
-          .toList();
-
-      // 4. Charger les records personnels (PRs)
-      final recordsQuery = await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('records')
-          .get();
-
-      _records = recordsQuery.docs
-          .map((doc) => PersonalRecord.fromJson(doc.data()))
-          .toList();
     }
+
+    _exercises = loadedExercises;
+
+    // 2. Charger les programmes
+    final programsQuery = await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('programs')
+        .get();
+
+    _programs = programsQuery.docs
+        .map((doc) => WorkoutProgram.fromJson(doc.data()))
+        .toList();
+
+    // 3. Charger les séances (historique)
+    final sessionsQuery = await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('sessions')
+        .orderBy('startTime', descending: true)
+        .get();
+
+    _sessions = sessionsQuery.docs
+        .map((doc) => WorkoutSession.fromJson(doc.data()))
+        .toList();
+
+    // 4. Charger les records personnels (PRs)
+    final recordsQuery = await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('records')
+        .get();
+
+    _records = recordsQuery.docs
+        .map((doc) => PersonalRecord.fromJson(doc.data()))
+        .toList();
   }
 
   // --- API INTERFACE ---
@@ -202,27 +128,16 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
     final data = exercise.toJson();
     data['ownerId'] = _userId;
 
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('exercises')
-          .document(exercise.id)
-          .set(data);
-    } else {
-      await _firestore
-          .collection('exercises')
-          .doc(exercise.id)
-          .set(data, fb_store.SetOptions(merge: true));
-    }
+    await _firestore
+        .collection('exercises')
+        .doc(exercise.id)
+        .set(data, fb_store.SetOptions(merge: true));
   }
 
   @override
   Future<void> deleteExercise(String id) async {
     _exercises.removeWhere((e) => e.id == id);
-    if (isDesktopNative) {
-      await fd.Firestore.instance.collection('exercises').document(id).delete();
-    } else {
-      await _firestore.collection('exercises').doc(id).delete();
-    }
+    await _firestore.collection('exercises').doc(id).delete();
   }
 
   @override
@@ -237,41 +152,23 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
       _programs.add(program);
     }
 
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('programs')
-          .document(program.id)
-          .set(program.toJson());
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('programs')
-          .doc(program.id)
-          .set(program.toJson(), fb_store.SetOptions(merge: true));
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('programs')
+        .doc(program.id)
+        .set(program.toJson(), fb_store.SetOptions(merge: true));
   }
 
   @override
   Future<void> deleteProgram(String id) async {
     _programs.removeWhere((p) => p.id == id);
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('programs')
-          .document(id)
-          .delete();
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('programs')
-          .doc(id)
-          .delete();
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('programs')
+        .doc(id)
+        .delete();
   }
 
   @override
@@ -287,41 +184,23 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
     }
     _sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
 
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('sessions')
-          .document(session.id)
-          .set(session.toJson());
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('sessions')
-          .doc(session.id)
-          .set(session.toJson(), fb_store.SetOptions(merge: true));
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('sessions')
+        .doc(session.id)
+        .set(session.toJson(), fb_store.SetOptions(merge: true));
   }
 
   @override
   Future<void> deleteSession(String id) async {
     _sessions.removeWhere((s) => s.id == id);
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('sessions')
-          .document(id)
-          .delete();
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('sessions')
-          .doc(id)
-          .delete();
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('sessions')
+        .doc(id)
+        .delete();
   }
 
   @override
@@ -336,41 +215,23 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
       _records.add(record);
     }
 
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('records')
-          .document(record.exerciseId)
-          .set(record.toJson());
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('records')
-          .doc(record.exerciseId)
-          .set(record.toJson(), fb_store.SetOptions(merge: true));
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('records')
+        .doc(record.exerciseId)
+        .set(record.toJson(), fb_store.SetOptions(merge: true));
   }
 
   @override
   Future<void> deletePersonalRecord(String exerciseId) async {
     _records.removeWhere((r) => r.exerciseId == exerciseId);
-    if (isDesktopNative) {
-      await fd.Firestore.instance
-          .collection('users')
-          .document(_userId!)
-          .collection('records')
-          .document(exerciseId)
-          .delete();
-    } else {
-      await _firestore
-          .collection('users')
-          .doc(_userId!)
-          .collection('records')
-          .doc(exerciseId)
-          .delete();
-    }
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('records')
+        .doc(exerciseId)
+        .delete();
   }
 }
 

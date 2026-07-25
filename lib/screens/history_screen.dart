@@ -5,6 +5,7 @@ import '../models/exercise.dart';
 import '../models/workout_session.dart';
 import '../models/exercise_set.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/workout_calendar_widget.dart';
 import 'workout_summary_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -45,9 +46,15 @@ class HistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Historique")),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
-        itemCount: flatItems.length,
+        itemCount: flatItems.length + 1,
         itemBuilder: (context, index) {
-          final item = flatItems[index];
+          if (index == 0) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 16.0),
+              child: WorkoutCalendarWidget(),
+            );
+          }
+          final item = flatItems[index - 1];
           if (item is String) {
             return Padding(
               padding: const EdgeInsets.only(top: 16.0, bottom: 12.0, left: 4.0),
@@ -69,6 +76,7 @@ class HistoryScreen extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildHistoryCard(
     BuildContext context,

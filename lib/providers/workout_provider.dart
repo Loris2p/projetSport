@@ -916,4 +916,59 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
     _sessionExercisesSummaryCache[session.id] = summary;
     return summary;
   }
+
+  /// Returns all sessions performed on a given date (ignoring time)
+  List<WorkoutSession> getSessionsForDate(DateTime date) {
+    return _history.where((session) {
+      return session.startTime.year == date.year &&
+          session.startTime.month == date.month &&
+          session.startTime.day == date.day;
+    }).toList();
+  }
+
+  /// Check if a specific date has at least one workout session
+  bool hasSessionOnDate(DateTime date) {
+    return _history.any((session) =>
+        session.startTime.year == date.year &&
+        session.startTime.month == date.month &&
+        session.startTime.day == date.day);
+  }
+
+  /// Calculates current consecutive days with completed workouts
+  int get currentStreak {
+    if (_history.isEmpty) return 0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    bool workedOutToday = hasSessionOnDate(today);
+    bool workedOutYesterday = hasSessionOnDate(yesterday);
+
+    if (!workedOutToday && !workedOutYesterday) {
+      return 0;
+    }
+
+    int streak = 0;
+    DateTime checkDate = workedOutToday ? today : yesterday;
+
+    while (hasSessionOnDate(checkDate)) {
+      streak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  /// Count unique days with completed workouts in a given month/year
+  int getActiveDaysCountForMonth(int year, int month) {
+    final Set<int> uniqueDays = {};
+    for (var session in _history) {
+      if (session.startTime.year == year && session.startTime.month == month) {
+        uniqueDays.add(session.startTime.day);
+      }
+    }
+    return uniqueDays.length;
+  }
 }
+

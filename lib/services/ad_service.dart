@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -12,7 +11,7 @@ class AdService {
 
   /// Initialise le SDK Mobile Ads (AdMob) sur les plateformes supportées (Android/iOS)
   static Future<void> initialize() async {
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    if (Platform.isAndroid || Platform.isIOS) {
       await MobileAds.instance.initialize();
     }
   }
