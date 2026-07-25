@@ -56,7 +56,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Créer un compte'), findsOneWidget);
-      expect(find.text('Nom complet'), findsOneWidget);
+      expect(find.text('Pseudonyme'), findsOneWidget);
       expect(find.text("S'enregistrer"), findsOneWidget);
     });
 

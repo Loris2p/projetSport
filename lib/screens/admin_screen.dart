@@ -278,9 +278,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       formKey.currentState!.save();
-                      final updated = UserProfile(
-                        uid: user.uid,
-                        email: user.email,
+                      final updated = user.copyWith(
                         displayName: name,
                         isAdmin: isAdmin,
                       );

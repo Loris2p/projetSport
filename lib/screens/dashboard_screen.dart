@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/workout_provider.dart';
 import '../providers/auth_provider.dart';
 import 'active_session_screen.dart';
+import 'profile_screen.dart';
 
 import '../widgets/workout_calendar_widget.dart';
 
@@ -72,6 +73,11 @@ class DashboardScreen extends StatelessWidget {
                         if (buildContext.mounted) {
                           await buildContext.read<WorkoutProvider>().loadUser(null);
                         }
+                      } else if (value == 'profile') {
+                        Navigator.push(
+                          buildContext,
+                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        );
                       } else if (value == 'admin') {
                         authProvider.setAdminTrainingMode(false);
                       }
@@ -81,6 +87,16 @@ class DashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem<String>(
+                        value: 'profile',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_outline, color: Color(0xff3b82f6), size: 20),
+                            SizedBox(width: 8),
+                            Text("Mon profil"),
+                          ],
+                        ),
+                      ),
                       if (authProvider.currentUser?.isAdmin == true)
                         const PopupMenuItem<String>(
                           value: 'admin',

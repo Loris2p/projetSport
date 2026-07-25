@@ -58,13 +58,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(String email, String password, String name) async {
+  Future<bool> signUp(String email, String password, String name, {DateTime? birthDate}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _currentUser = await authRepository.signUp(email, password, name);
+      _currentUser = await authRepository.signUp(email, password, name, birthDate: birthDate);
       _isLoading = false;
       notifyListeners();
       return true;

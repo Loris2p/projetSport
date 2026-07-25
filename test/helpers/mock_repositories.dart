@@ -44,7 +44,7 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<UserProfile> signUp(String email, String password, String name) async {
+  Future<UserProfile> signUp(String email, String password, String name, {DateTime? birthDate}) async {
     if (shouldFail) throw Exception(errorMessage);
     if (email.trim().isEmpty || password.trim().isEmpty || name.trim().isEmpty) {
       throw Exception("Tous les champs sont obligatoires.");
@@ -59,6 +59,7 @@ class MockAuthRepository implements AuthRepository {
       uid: 'user_${DateTime.now().millisecondsSinceEpoch}',
       email: email.trim().toLowerCase(),
       displayName: name.trim(),
+      birthDate: birthDate,
       isAdmin: false,
     );
     users.add(newUser);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
@@ -16,7 +17,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+  final _birthDateController = TextEditingController();
 
+  DateTime? _birthDate;
   bool _isLoginMode = true;
   bool _obscurePassword = true;
 
@@ -53,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
+    _birthDateController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -61,10 +65,46 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() {
       _isLoginMode = !_isLoginMode;
       _formKey.currentState?.reset();
+      _birthDate = null;
+      _birthDateController.clear();
       context.read<AuthProvider>().clearError();
     });
     _animationController.reset();
     _animationController.forward();
+  }
+
+  Future<void> _selectBirthDate(BuildContext context) async {
+    final DateTime initialDate = _birthDate ?? DateTime(2000, 1, 1);
+    final DateTime firstDate = DateTime(1900);
+    final DateTime lastDate = DateTime.now();
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xff3b82f6),
+              onPrimary: Colors.white,
+              surface: Color(0xff1e1b4b),
+              onSurface: Colors.white,
+            ),
+            dialogTheme: const DialogThemeData(backgroundColor: Color(0xff0f172a)),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+        _birthDateController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -79,7 +119,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (_isLoginMode) {
       success = await authProvider.signIn(email, password);
     } else {
-      success = await authProvider.signUp(email, password, name);
+      success = await authProvider.signUp(
+        email,
+        password,
+        name,
+        birthDate: _birthDate,
+      );
     }
 
     if (success && mounted) {
@@ -241,7 +286,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               const SizedBox(height: 16),
                             ],
 
-                            // Name field (Sign Up only)
+                            // Name & Birth Date fields (Sign Up only)
                             if (!_isLoginMode) ...[
                               TextFormField(
                                 controller: _nameController,
@@ -249,12 +294,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 autofillHints: const [AutofillHints.name],
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(
-                                  labelText: "Nom complet",
+                                  labelText: "Pseudonyme",
                                   prefixIcon: Icons.person_outline,
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return "Veuillez entrer votre nom.";
+                                    return "Veuillez entrer votre pseudonyme.";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _birthDateController,
+                                readOnly: true,
+                                style: const TextStyle(color: Colors.white),
+                                onTap: () => _selectBirthDate(context),
+                                decoration: _inputDecoration(
+                                  labelText: "Date de naissance",
+                                  prefixIcon: Icons.cake_outlined,
+                                  suffixIcon: const Icon(Icons.calendar_today, color: Colors.white60, size: 20),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Veuillez sélectionner votre date de naissance.";
                                   }
                                   return null;
                                 },

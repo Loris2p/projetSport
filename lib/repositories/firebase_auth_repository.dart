@@ -74,7 +74,7 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<UserProfile> signUp(String email, String password, String name) async {
+  Future<UserProfile> signUp(String email, String password, String name, {DateTime? birthDate}) async {
     if (email.trim().isEmpty || password.trim().isEmpty || name.trim().isEmpty) {
       throw Exception("Tous les champs sont obligatoires.");
     }
@@ -94,6 +94,7 @@ class FirebaseAuthRepository implements AuthRepository {
         uid: fbUser.uid,
         email: email.trim().toLowerCase(),
         displayName: name.trim(),
+        birthDate: birthDate,
         isAdmin: false,
       );
 
