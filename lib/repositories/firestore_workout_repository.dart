@@ -42,12 +42,26 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
     final List<Exercise> loadedExercises = [];
 
-    // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur)
-    // Exercices publics (isCustom == false)
-    final publicQuery = await _firestore
-        .collection('exercises')
-        .where('isCustom', isEqualTo: false)
-        .get();
+    // 1. Charger les exercices (globaux de l'admin + personnels de l'utilisateur) avec stratégie Cache-First
+    fb_store.QuerySnapshot<Map<String, dynamic>> publicQuery;
+    try {
+      publicQuery = await _firestore
+          .collection('exercises')
+          .where('isCustom', isEqualTo: false)
+          .get(const fb_store.GetOptions(source: fb_store.Source.cache));
+
+      if (publicQuery.docs.isEmpty) {
+        publicQuery = await _firestore
+            .collection('exercises')
+            .where('isCustom', isEqualTo: false)
+            .get(const fb_store.GetOptions(source: fb_store.Source.serverAndCache));
+      }
+    } catch (_) {
+      publicQuery = await _firestore
+          .collection('exercises')
+          .where('isCustom', isEqualTo: false)
+          .get();
+    }
 
     loadedExercises.addAll(
       publicQuery.docs
@@ -57,11 +71,28 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
     // Si l'utilisateur n'est pas l'administrateur par défaut, charger également ses exercices personnalisés
     if (_userId != 'admin_uid_global') {
-      final privateQuery = await _firestore
-          .collection('exercises')
-          .where('isCustom', isEqualTo: true)
-          .where('ownerId', isEqualTo: _userId)
-          .get();
+      fb_store.QuerySnapshot<Map<String, dynamic>> privateQuery;
+      try {
+        privateQuery = await _firestore
+            .collection('exercises')
+            .where('isCustom', isEqualTo: true)
+            .where('ownerId', isEqualTo: _userId)
+            .get(const fb_store.GetOptions(source: fb_store.Source.cache));
+
+        if (privateQuery.docs.isEmpty) {
+          privateQuery = await _firestore
+              .collection('exercises')
+              .where('isCustom', isEqualTo: true)
+              .where('ownerId', isEqualTo: _userId)
+              .get(const fb_store.GetOptions(source: fb_store.Source.serverAndCache));
+        }
+      } catch (_) {
+        privateQuery = await _firestore
+            .collection('exercises')
+            .where('isCustom', isEqualTo: true)
+            .where('ownerId', isEqualTo: _userId)
+            .get();
+      }
 
       final privateExercises = privateQuery.docs
           .map((doc) => Exercise.fromJson(doc.data()))
