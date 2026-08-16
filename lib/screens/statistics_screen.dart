@@ -6,6 +6,9 @@ import '../models/exercise.dart';
 import '../models/workout_session.dart';
 import '../models/body_measurement.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/muscle_heatmap_widget.dart';
+import '../widgets/correlation_chart_widget.dart';
+import 'workout_recap_screen.dart';
 import '../theme.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -69,6 +72,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     return Scaffold(
       appBar: AppBar(
         title: const Text("Analyses & Stats"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, color: Colors.amber),
+            tooltip: "Mon Bilan Sportif (Wrapped)",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WorkoutRecapScreen()),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.athleticBlue,
@@ -443,6 +458,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
               ],
             ),
           ),
+          const SizedBox(height: 20),
+
+          // Muscle Heatmap
+          MuscleHeatmapWidget(provider: provider),
           const SizedBox(height: 20),
 
           // Muscle distribution card
@@ -986,6 +1005,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
               ],
             ),
           ),
+
+          const SizedBox(height: 20),
+
+          // Graphique de Corrélation Poids vs Performances
+          CorrelationChartWidget(provider: provider),
 
           const SizedBox(height: 24),
 

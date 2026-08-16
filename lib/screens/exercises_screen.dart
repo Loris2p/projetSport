@@ -4,6 +4,8 @@ import '../models/exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
+import '../widgets/share_qr_dialog.dart';
+import '../widgets/import_data_dialog.dart';
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key});
@@ -39,6 +41,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
       appBar: AppBar(
         title: const Text("Exercices"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xff2563eb)),
+            tooltip: "Importer des exercices (QR / Code)",
+            onPressed: () => ImportDataDialog.show(context),
+          ),
           IconButton(
             icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view, color: const Color(0xff2563eb)),
             tooltip: _isGridView ? "Afficher en liste" : "Afficher en grille (3 colonnes)",
@@ -279,6 +286,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                       tooltip: "Voir la vidéo d'explication",
                                       onPressed: () => YoutubePlayerDialog.show(context, ex.name, ex.videoUrl!),
                                     ),
+                                  IconButton(
+                                    icon: const Icon(Icons.qr_code_2_rounded, size: 20, color: Color(0xff2563eb)),
+                                    tooltip: "Partager cet exercice (QR Code)",
+                                    onPressed: () => ShareQrDialog.showForExercise(context, ex),
+                                  ),
                                   if (ex.isCustom) ...[
                                     IconButton(
                                       icon: const Icon(Icons.edit_outlined, size: 20),
@@ -288,8 +300,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                       icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
                                       onPressed: () => _showDeleteConfirm(context, ex, workoutProvider),
                                     ),
-                                  ] else if (ex.videoUrl == null || ex.videoUrl!.trim().isEmpty)
-                                    const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                                  ],
                                 ],
                               ),
                             ),

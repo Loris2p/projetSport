@@ -8,6 +8,8 @@ import '../models/exercise_set.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/category_badge.dart';
 import '../widgets/youtube_player_dialog.dart';
+import '../widgets/share_qr_dialog.dart';
+import '../widgets/import_data_dialog.dart';
 import 'active_session_screen.dart';
 
 class ProgramsScreen extends StatelessWidget {
@@ -23,7 +25,13 @@ class ProgramsScreen extends StatelessWidget {
         title: const Text("Programmes"),
         actions: [
           IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xff2563eb)),
+            tooltip: "Importer un programme (QR / Code)",
+            onPressed: () => ImportDataDialog.show(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.add, color: Color(0xff2563eb)),
+            tooltip: "Créer un programme",
             onPressed: () {
               Navigator.push(
                 context,
@@ -185,6 +193,18 @@ class ProgramsScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_2_rounded, size: 20, color: Color(0xff2563eb)),
+                    tooltip: "Partager ce programme (QR Code)",
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      ShareQrDialog.showForProgram(
+                        context,
+                        program: program,
+                        availableExercises: provider.exercises,
+                      );
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
                     tooltip: "Modifier",
