@@ -231,6 +231,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     final formKey = GlobalKey<FormState>();
     String name = user.displayName;
     bool isAdmin = user.isAdmin;
+    bool showAds = user.showAds;
 
     showDialog(
       context: context,
@@ -265,6 +266,18 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         });
                       },
                     ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: const Text("Publicités actives"),
+                      subtitle: const Text("Afficher les bannières publicitaires"),
+                      value: showAds,
+                      activeThumbColor: const Color(0xff2563eb),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          showAds = val;
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -281,6 +294,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                       final updated = user.copyWith(
                         displayName: name,
                         isAdmin: isAdmin,
+                        showAds: showAds,
                       );
                       
                       final authProvider = context.read<AuthProvider>();

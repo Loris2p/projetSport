@@ -16,13 +16,19 @@ import 'screens/admin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await AdService.initialize();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (_) {
+    // Ignoré si le fichier .env n'est pas présent
+  }
 
   // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize AdService (MobileAds + Firebase Remote Config)
+  await AdService.initialize();
   
   // Initialize locale formatting for French (used for dates and histories)
   await initializeDateFormatting('fr_FR', null);
