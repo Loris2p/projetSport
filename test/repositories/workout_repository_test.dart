@@ -5,6 +5,7 @@ import 'package:sport_app/models/performed_exercise.dart';
 import 'package:sport_app/models/program_exercise.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
+import 'package:sport_app/models/body_measurement.dart';
 import '../helpers/mock_repositories.dart';
 
 void main() {
@@ -61,6 +62,30 @@ void main() {
 
       await workoutRepo.deleteSession('sess_1');
       expect(workoutRepo.getHistory(), isEmpty);
+    });
+
+    test('Should handle body measurement CRUD operations', () async {
+      final measurement = BodyMeasurement(
+        id: 'bm_1',
+        date: DateTime.now(),
+        weight: 76.5,
+        height: 180.0,
+        bodyFatPercentage: 14.8,
+        musclePercentage: 43.0,
+        waterPercentage: 59.0,
+      );
+
+      await workoutRepo.saveBodyMeasurement(measurement);
+      expect(workoutRepo.getBodyMeasurements().length, equals(1));
+      expect(workoutRepo.getBodyMeasurements().first.weight, equals(76.5));
+
+      final updated = measurement.copyWith(weight: 75.8);
+      await workoutRepo.saveBodyMeasurement(updated);
+      expect(workoutRepo.getBodyMeasurements().length, equals(1));
+      expect(workoutRepo.getBodyMeasurements().first.weight, equals(75.8));
+
+      await workoutRepo.deleteBodyMeasurement('bm_1');
+      expect(workoutRepo.getBodyMeasurements(), isEmpty);
     });
 
     test('Should update currentUserId on setUserId', () async {

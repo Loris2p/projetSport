@@ -2,6 +2,7 @@ import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
 import '../models/personal_record.dart';
+import '../models/body_measurement.dart';
 
 abstract class WorkoutRepository {
   Future<void> init();
@@ -21,6 +22,10 @@ abstract class WorkoutRepository {
   List<PersonalRecord> getPersonalRecords();
   Future<void> savePersonalRecord(PersonalRecord record);
   Future<void> deletePersonalRecord(String exerciseId);
+
+  List<BodyMeasurement> getBodyMeasurements();
+  Future<void> saveBodyMeasurement(BodyMeasurement measurement);
+  Future<void> deleteBodyMeasurement(String id);
 }
 
 

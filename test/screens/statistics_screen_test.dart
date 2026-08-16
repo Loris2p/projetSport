@@ -44,11 +44,26 @@ void main() {
       );
     }
 
-    testWidgets('Should render statistics headers and summary widgets', (WidgetTester tester) async {
+    testWidgets('Should render statistics headers and 3 tabs', (WidgetTester tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
       expect(find.text('Analyses & Stats'), findsOneWidget);
+      expect(find.text('Exercices'), findsOneWidget);
+      expect(find.text('Séances'), findsOneWidget);
+      expect(find.text('Corporel'), findsOneWidget);
+    });
+
+    testWidgets('Should navigate to Corporel tab and show empty state or measurements', (WidgetTester tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      // Tap on 'Corporel' tab
+      await tester.tap(find.text('Corporel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aucune mesure corporelle'), findsOneWidget);
+      expect(find.text('Enregistrer ma première mesure'), findsOneWidget);
     });
   });
 }

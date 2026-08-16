@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/workout_program.dart';
 import '../models/workout_session.dart';
 import '../models/personal_record.dart';
+import '../models/body_measurement.dart';
 import 'workout_repository.dart';
 
 class FirestoreWorkoutRepository implements WorkoutRepository {
@@ -14,6 +15,7 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _sessions = [];
   List<PersonalRecord> _records = [];
+  List<BodyMeasurement> _bodyMeasurements = [];
 
   @override
   Future<void> init() async {
@@ -37,6 +39,7 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
       _programs = [];
       _sessions = [];
       _records = [];
+      _bodyMeasurements = [];
       return;
     }
 
@@ -139,6 +142,18 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
     _records = recordsQuery.docs
         .map((doc) => PersonalRecord.fromJson(doc.data()))
+        .toList();
+
+    // 5. Charger les mesures corporelles
+    final measurementsQuery = await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('body_measurements')
+        .orderBy('date', descending: true)
+        .get();
+
+    _bodyMeasurements = measurementsQuery.docs
+        .map((doc) => BodyMeasurement.fromJson(doc.data()))
         .toList();
   }
 
@@ -262,6 +277,38 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
         .doc(_userId!)
         .collection('records')
         .doc(exerciseId)
+        .delete();
+  }
+
+  @override
+  List<BodyMeasurement> getBodyMeasurements() => _bodyMeasurements;
+
+  @override
+  Future<void> saveBodyMeasurement(BodyMeasurement measurement) async {
+    final index = _bodyMeasurements.indexWhere((m) => m.id == measurement.id);
+    if (index >= 0) {
+      _bodyMeasurements[index] = measurement;
+    } else {
+      _bodyMeasurements.add(measurement);
+    }
+    _bodyMeasurements.sort((a, b) => b.date.compareTo(a.date));
+
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('body_measurements')
+        .doc(measurement.id)
+        .set(measurement.toJson(), fb_store.SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> deleteBodyMeasurement(String id) async {
+    _bodyMeasurements.removeWhere((m) => m.id == id);
+    await _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('body_measurements')
+        .doc(id)
         .delete();
   }
 }

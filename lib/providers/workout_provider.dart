@@ -10,6 +10,7 @@ import '../models/workout_program.dart';
 import '../models/workout_session.dart';
 import '../models/program_exercise.dart';
 import '../models/personal_record.dart';
+import '../models/body_measurement.dart';
 import '../repositories/workout_repository.dart';
 import '../services/notification_service.dart';
 
@@ -21,6 +22,7 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
   List<WorkoutProgram> _programs = [];
   List<WorkoutSession> _history = [];
   List<PersonalRecord> _personalRecords = [];
+  List<BodyMeasurement> _bodyMeasurements = [];
   String? _favoriteProgramId;
   String? _currentUserId;
 
@@ -85,6 +87,8 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
   List<WorkoutProgram> get programs => _programs;
   List<WorkoutSession> get history => _history;
   List<PersonalRecord> get personalRecords => _personalRecords;
+  List<BodyMeasurement> get bodyMeasurements => _bodyMeasurements;
+  BodyMeasurement? get latestBodyMeasurement => _bodyMeasurements.isNotEmpty ? _bodyMeasurements.first : null;
   WorkoutSession? get activeSession => _activeSession;
   bool get isLoading => _isLoading;
   String? get favoriteProgramId => _favoriteProgramId;
@@ -145,6 +149,7 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
     _programs = repository.getPrograms();
     _history = repository.getHistory();
     _personalRecords = repository.getPersonalRecords();
+    _bodyMeasurements = repository.getBodyMeasurements();
 
     _updateWeeklyStatsAndFlatHistory();
 
@@ -163,6 +168,7 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
     _programs = repository.getPrograms();
     _history = repository.getHistory();
     _personalRecords = repository.getPersonalRecords();
+    _bodyMeasurements = repository.getBodyMeasurements();
 
     // Vider les caches mémoire lors du changement d'utilisateur
     _sessionVolumeCache.clear();
@@ -263,6 +269,19 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
     }
 
     _updateWeeklyStatsAndFlatHistory();
+    notifyListeners();
+  }
+
+  // --- Body Measurements ---
+  Future<void> saveBodyMeasurement(BodyMeasurement measurement) async {
+    await repository.saveBodyMeasurement(measurement);
+    _bodyMeasurements = repository.getBodyMeasurements();
+    notifyListeners();
+  }
+
+  Future<void> deleteBodyMeasurement(String id) async {
+    await repository.deleteBodyMeasurement(id);
+    _bodyMeasurements = repository.getBodyMeasurements();
     notifyListeners();
   }
 

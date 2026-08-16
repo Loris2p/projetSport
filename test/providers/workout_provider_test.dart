@@ -6,6 +6,7 @@ import 'package:sport_app/models/performed_exercise.dart';
 import 'package:sport_app/models/program_exercise.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
+import 'package:sport_app/models/body_measurement.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_app/providers/workout_provider.dart';
 import '../helpers/mock_repositories.dart';
@@ -404,6 +405,46 @@ void main() {
         provider.stopRestTimer();
         expect(provider.isRestTimerActive, isFalse);
         expect(provider.restTimerRemaining, equals(0));
+      });
+    });
+
+    group('Body Measurements Operations', () {
+      test('saveBodyMeasurement() and deleteBodyMeasurement() state management', () async {
+        await provider.init();
+        expect(provider.bodyMeasurements, isEmpty);
+        expect(provider.latestBodyMeasurement, isNull);
+
+        final m1 = BodyMeasurement(
+          id: 'bm_1',
+          date: DateTime(2026, 8, 10),
+          weight: 78.0,
+          height: 180.0,
+          bodyFatPercentage: 16.0,
+          musclePercentage: 41.0,
+          waterPercentage: 58.0,
+        );
+
+        final m2 = BodyMeasurement(
+          id: 'bm_2',
+          date: DateTime(2026, 8, 16),
+          weight: 77.2,
+          height: 180.0,
+          bodyFatPercentage: 15.5,
+          musclePercentage: 41.5,
+          waterPercentage: 58.5,
+        );
+
+        await provider.saveBodyMeasurement(m1);
+        await provider.saveBodyMeasurement(m2);
+
+        expect(provider.bodyMeasurements.length, equals(2));
+        // Sorted newest first
+        expect(provider.latestBodyMeasurement?.id, equals('bm_2'));
+        expect(provider.latestBodyMeasurement?.weight, equals(77.2));
+
+        await provider.deleteBodyMeasurement('bm_2');
+        expect(provider.bodyMeasurements.length, equals(1));
+        expect(provider.latestBodyMeasurement?.id, equals('bm_1'));
       });
     });
   });

@@ -3,6 +3,7 @@ import 'package:sport_app/models/user_profile.dart';
 import 'package:sport_app/models/workout_program.dart';
 import 'package:sport_app/models/workout_session.dart';
 import 'package:sport_app/models/personal_record.dart';
+import 'package:sport_app/models/body_measurement.dart';
 import 'package:sport_app/repositories/auth_repository.dart';
 import 'package:sport_app/repositories/workout_repository.dart';
 
@@ -109,6 +110,7 @@ class MockWorkoutRepository implements WorkoutRepository {
   final List<WorkoutProgram> programs = [];
   final List<WorkoutSession> history = [];
   final List<PersonalRecord> personalRecords = [];
+  final List<BodyMeasurement> bodyMeasurements = [];
 
   bool shouldFail = false;
 
@@ -206,5 +208,28 @@ class MockWorkoutRepository implements WorkoutRepository {
   Future<void> deletePersonalRecord(String exerciseId) async {
     if (shouldFail) throw Exception('Delete record failed');
     personalRecords.removeWhere((r) => r.exerciseId == exerciseId);
+  }
+
+  @override
+  List<BodyMeasurement> getBodyMeasurements() {
+    return List.from(bodyMeasurements);
+  }
+
+  @override
+  Future<void> saveBodyMeasurement(BodyMeasurement measurement) async {
+    if (shouldFail) throw Exception('Save measurement failed');
+    final index = bodyMeasurements.indexWhere((m) => m.id == measurement.id);
+    if (index >= 0) {
+      bodyMeasurements[index] = measurement;
+    } else {
+      bodyMeasurements.add(measurement);
+    }
+    bodyMeasurements.sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  @override
+  Future<void> deleteBodyMeasurement(String id) async {
+    if (shouldFail) throw Exception('Delete measurement failed');
+    bodyMeasurements.removeWhere((m) => m.id == id);
   }
 }

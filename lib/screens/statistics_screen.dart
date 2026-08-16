@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:uuid/uuid.dart';
 import '../models/exercise.dart';
 import '../models/workout_session.dart';
+import '../models/body_measurement.dart';
 import '../providers/workout_provider.dart';
 import '../theme.dart';
 
@@ -15,15 +17,19 @@ class StatisticsScreen extends StatefulWidget {
 
 class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _uuid = const Uuid();
   
   // Exercise progression chart state
   String? _selectedExerciseId;
   bool _showEstimated1RM = false; // false = Max Weight, true = Estimated 1RM
 
+  // Body stats state
+  String _selectedBodyMetric = 'weight'; // 'weight', 'fat', 'muscle', 'water', 'bmi'
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -71,6 +77,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           tabs: const [
             Tab(icon: Icon(Icons.show_chart), text: "Exercices"),
             Tab(icon: Icon(Icons.bar_chart), text: "Séances"),
+            Tab(icon: Icon(Icons.accessibility_new_rounded), text: "Corporel"),
           ],
         ),
       ),
@@ -79,6 +86,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         children: [
           _buildExercisesTab(workoutProvider, performedExercises),
           _buildSessionsTab(workoutProvider, history),
+          _buildBodyStatsTab(workoutProvider),
         ],
       ),
     );
@@ -614,6 +622,1005 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     );
   }
 
+  // ==================== ONGLET CORPOREL (STATS CORPORELLES) ====================
+
+  Widget _buildBodyStatsTab(WorkoutProvider provider) {
+    final measurements = provider.bodyMeasurements;
+
+    if (measurements.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppTheme.athleticBlue.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.accessibility_new_rounded, size: 48, color: AppTheme.athleticBlue),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "Aucune mesure corporelle",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Suivez l'évolution de votre corps : poids, taille, % de masse grasse, masse musculaire et masse hydrique.",
+                style: TextStyle(color: Colors.grey[400], fontSize: 13, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => _showAddOrEditMeasurementModal(context),
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text("Enregistrer ma première mesure", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.athleticBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final latest = measurements.first;
+    final previous = measurements.length > 1 ? measurements[1] : null;
+
+    // Timeline data for selected metric (sorted oldest to newest for graph)
+    final chronologicalMeasurements = measurements.reversed.toList();
+    final List<Map<String, dynamic>> metricData = [];
+
+    for (var m in chronologicalMeasurements) {
+      double? val;
+      switch (_selectedBodyMetric) {
+        case 'weight':
+          val = m.weight;
+          break;
+        case 'fat':
+          val = m.bodyFatPercentage;
+          break;
+        case 'muscle':
+          val = m.musclePercentage;
+          break;
+        case 'water':
+          val = m.waterPercentage;
+          break;
+        case 'bmi':
+          val = m.bmi;
+          break;
+      }
+      if (val != null) {
+        metricData.add({
+          'date': m.date,
+          'value': val,
+        });
+      }
+    }
+
+    final values = metricData.map((d) => (d['value'] as num).toDouble()).toList();
+    final dates = metricData.map((d) => d['date'] as DateTime).toList();
+
+    // Determine current metric metadata (label, unit, color)
+    final String metricName;
+    final String metricUnit;
+    final Color metricColor;
+    switch (_selectedBodyMetric) {
+      case 'fat':
+        metricName = "Masse grasse";
+        metricUnit = "%";
+        metricColor = const Color(0xfff59e0b); // Amber
+        break;
+      case 'muscle':
+        metricName = "Masse musculaire";
+        metricUnit = "%";
+        metricColor = const Color(0xff10b981); // Emerald
+        break;
+      case 'water':
+        metricName = "Masse hydrique (Eau)";
+        metricUnit = "%";
+        metricColor = const Color(0xff06b6d4); // Cyan
+        break;
+      case 'bmi':
+        metricName = "Indice de Masse Corporelle (IMC)";
+        metricUnit = "";
+        metricColor = const Color(0xff8b5cf6); // Purple
+        break;
+      case 'weight':
+      default:
+        metricName = "Poids corporel";
+        metricUnit = "kg";
+        metricColor = AppTheme.athleticBlue; // Blue
+        break;
+    }
+
+    // Key figures for selected metric
+    final double? currentVal = values.isNotEmpty ? values.last : null;
+    final double? minVal = values.isNotEmpty ? values.reduce((a, b) => a < b ? a : b) : null;
+    final double? maxVal = values.isNotEmpty ? values.reduce((a, b) => a > b ? a : b) : null;
+    final double? avgVal = values.isNotEmpty ? values.reduce((a, b) => a + b) / values.length : null;
+    final double? deltaTotal = values.length >= 2 ? values.last - values.first : null;
+
+    // Weight delta with previous measurement
+    double? weightDelta;
+    if (latest.weight != null && previous?.weight != null) {
+      weightDelta = latest.weight! - previous!.weight!;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header summary & Add button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Dernières mesures",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddOrEditMeasurementModal(context),
+                icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                label: const Text("Nouvelle mesure", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.athleticBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Overview Cards Grid
+          Row(
+            children: [
+              // Poids
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "Poids actuel",
+                  value: latest.weight != null ? "${latest.weight!.toStringAsFixed(1)} kg" : "--",
+                  subValue: weightDelta != null
+                      ? "${weightDelta >= 0 ? '+' : ''}${weightDelta.toStringAsFixed(1)} kg vs préc."
+                      : (latest.height != null ? "${latest.height!.toStringAsFixed(0)} cm" : null),
+                  subValueColor: weightDelta != null
+                      ? (weightDelta < 0 ? const Color(0xff10b981) : Colors.amber)
+                      : Colors.grey,
+                  icon: Icons.monitor_weight_outlined,
+                  color: AppTheme.athleticBlue,
+                  onTap: () => setState(() => _selectedBodyMetric = 'weight'),
+                  isSelected: _selectedBodyMetric == 'weight',
+                ),
+              ),
+              const SizedBox(width: 8),
+              // IMC
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "IMC",
+                  value: latest.bmi != null ? latest.bmi!.toStringAsFixed(1) : "--",
+                  subValue: latest.bmiCategory ?? (latest.height == null ? "Ajouter taille" : null),
+                  subValueColor: _getBmiColor(latest.bmi),
+                  icon: Icons.health_and_safety_outlined,
+                  color: const Color(0xff8b5cf6),
+                  onTap: () => setState(() => _selectedBodyMetric = 'bmi'),
+                  isSelected: _selectedBodyMetric == 'bmi',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // % Masse grasse
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "Masse grasse",
+                  value: latest.bodyFatPercentage != null ? "${latest.bodyFatPercentage!.toStringAsFixed(1)}%" : "--",
+                  subValue: latest.fatMassKg != null ? "${latest.fatMassKg!.toStringAsFixed(1)} kg" : null,
+                  icon: Icons.pie_chart_outline,
+                  color: const Color(0xfff59e0b),
+                  onTap: () => setState(() => _selectedBodyMetric = 'fat'),
+                  isSelected: _selectedBodyMetric == 'fat',
+                ),
+              ),
+              const SizedBox(width: 8),
+              // % Masse musculaire
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "Masse musculaire",
+                  value: latest.musclePercentage != null ? "${latest.musclePercentage!.toStringAsFixed(1)}%" : "--",
+                  subValue: latest.muscleMassKg != null ? "${latest.muscleMassKg!.toStringAsFixed(1)} kg" : null,
+                  icon: Icons.fitness_center_rounded,
+                  color: const Color(0xff10b981),
+                  onTap: () => setState(() => _selectedBodyMetric = 'muscle'),
+                  isSelected: _selectedBodyMetric == 'muscle',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // % Masse hydrique
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "Masse hydrique (Eau)",
+                  value: latest.waterPercentage != null ? "${latest.waterPercentage!.toStringAsFixed(1)}%" : "--",
+                  subValue: latest.waterMassKg != null ? "${latest.waterMassKg!.toStringAsFixed(1)} L" : null,
+                  icon: Icons.water_drop_outlined,
+                  color: const Color(0xff06b6d4),
+                  onTap: () => setState(() => _selectedBodyMetric = 'water'),
+                  isSelected: _selectedBodyMetric == 'water',
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Taille & Date
+              Expanded(
+                child: _buildMetricOverviewCard(
+                  title: "Dernière pesée",
+                  value: DateFormat('dd/MM/yyyy').format(latest.date),
+                  subValue: latest.height != null ? "Taille: ${latest.height!.toStringAsFixed(0)} cm" : (latest.note ?? ""),
+                  icon: Icons.calendar_today_outlined,
+                  color: Colors.tealAccent,
+                  onTap: null,
+                  isSelected: false,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Section Graphique
+          const Text(
+            "Évolution graphique",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+
+          // Selector Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildBodyMetricChip('weight', '⚖️ Poids', AppTheme.athleticBlue),
+                const SizedBox(width: 8),
+                _buildBodyMetricChip('fat', '📉 % Graisse', const Color(0xfff59e0b)),
+                const SizedBox(width: 8),
+                _buildBodyMetricChip('muscle', '💪 % Muscle', const Color(0xff10b981)),
+                const SizedBox(width: 8),
+                _buildBodyMetricChip('water', '💧 % Eau', const Color(0xff06b6d4)),
+                const SizedBox(width: 8),
+                _buildBodyMetricChip('bmi', '📊 IMC', const Color(0xff8b5cf6)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Card du graphique
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.darkSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.darkBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      metricName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                    ),
+                    if (currentVal != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: metricColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: metricColor.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          "${currentVal.toStringAsFixed(1)} $metricUnit",
+                          style: TextStyle(color: metricColor, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (values.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40.0),
+                    child: Center(
+                      child: Text(
+                        "Aucune donnée enregistrée pour cette métrique.\nAjoutez ou modifiez une pesée pour renseigner cette valeur.",
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else ...[
+                  CustomLineChart(
+                    values: values,
+                    dates: dates,
+                    unit: metricUnit,
+                    color: metricColor,
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: AppTheme.darkBorder, height: 1),
+                  const SizedBox(height: 12),
+                  // KPI pills row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildChartStatItem("Min", minVal != null ? "${minVal.toStringAsFixed(1)} $metricUnit" : "--"),
+                      _buildChartStatItem("Moy.", avgVal != null ? "${avgVal.toStringAsFixed(1)} $metricUnit" : "--"),
+                      _buildChartStatItem("Max", maxVal != null ? "${maxVal.toStringAsFixed(1)} $metricUnit" : "--"),
+                      _buildChartStatItem(
+                        "Évolution",
+                        deltaTotal != null
+                            ? "${deltaTotal >= 0 ? '+' : ''}${deltaTotal.toStringAsFixed(1)} $metricUnit"
+                            : "--",
+                        valueColor: deltaTotal == null
+                            ? Colors.white
+                            : (_selectedBodyMetric == 'fat' || _selectedBodyMetric == 'weight'
+                                ? (deltaTotal <= 0 ? const Color(0xff10b981) : Colors.amber)
+                                : (deltaTotal >= 0 ? const Color(0xff10b981) : Colors.amber)),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Section Historique
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Historique des pesées (${measurements.length})",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Liste des mesures
+          ...measurements.map((measurement) {
+            return _buildMeasurementHistoryTile(context, provider, measurement);
+          }),
+
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBodyMetricChip(String key, String label, Color color) {
+    final isSelected = _selectedBodyMetric == key;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[400],
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: color,
+      backgroundColor: AppTheme.darkSurface,
+      side: BorderSide(
+        color: isSelected ? color : AppTheme.darkBorder,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      onSelected: (_) => setState(() => _selectedBodyMetric = key),
+    );
+  }
+
+  Widget _buildMetricOverviewCard({
+    required String title,
+    required String value,
+    String? subValue,
+    Color? subValueColor,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+    bool isSelected = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.darkSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : AppTheme.darkBorder,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(icon, color: color, size: 16),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            if (subValue != null && subValue.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                subValue,
+                style: TextStyle(
+                  color: subValueColor ?? Colors.grey[400],
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartStatItem(String label, String value, {Color? valueColor}) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey[500], fontSize: 10, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor ?? Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getBmiColor(double? bmi) {
+    if (bmi == null) return Colors.grey;
+    if (bmi < 18.5) return Colors.blue;
+    if (bmi < 25.0) return const Color(0xff10b981); // Normal (Green)
+    if (bmi < 30.0) return Colors.amber; // Overweight (Amber)
+    return Colors.redAccent; // Obese (Red)
+  }
+
+  Widget _buildMeasurementHistoryTile(
+    BuildContext context,
+    WorkoutProvider provider,
+    BodyMeasurement measurement,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.darkSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.darkBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.athleticBlue),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(measurement.date),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  ),
+                ],
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onSelected: (action) {
+                  if (action == 'edit') {
+                    _showAddOrEditMeasurementModal(context, measurement: measurement);
+                  } else if (action == 'delete') {
+                    _confirmDeleteMeasurement(context, provider, measurement.id);
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 16, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text("Modifier"),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                        SizedBox(width: 8),
+                        Text("Supprimer", style: TextStyle(color: Colors.redAccent)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Badges row
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (measurement.weight != null)
+                _buildTagChip("⚖️ ${measurement.weight!.toStringAsFixed(1)} kg", AppTheme.athleticBlue),
+              if (measurement.height != null)
+                _buildTagChip("📏 ${measurement.height!.toStringAsFixed(0)} cm", Colors.teal),
+              if (measurement.bmi != null)
+                _buildTagChip("📊 IMC ${measurement.bmi!.toStringAsFixed(1)}", _getBmiColor(measurement.bmi)),
+              if (measurement.bodyFatPercentage != null)
+                _buildTagChip("📉 Graisse ${measurement.bodyFatPercentage!.toStringAsFixed(1)}%", const Color(0xfff59e0b)),
+              if (measurement.musclePercentage != null)
+                _buildTagChip("💪 Muscle ${measurement.musclePercentage!.toStringAsFixed(1)}%", const Color(0xff10b981)),
+              if (measurement.waterPercentage != null)
+                _buildTagChip("💧 Eau ${measurement.waterPercentage!.toStringAsFixed(1)}%", const Color(0xff06b6d4)),
+              if (measurement.boneMass != null)
+                _buildTagChip("🦴 Os ${measurement.boneMass!.toStringAsFixed(1)} kg", Colors.blueGrey),
+            ],
+          ),
+          if (measurement.note != null && measurement.note!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              "Note : ${measurement.note}",
+              style: TextStyle(color: Colors.grey[400], fontSize: 11, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  void _confirmDeleteMeasurement(BuildContext context, WorkoutProvider provider, String id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.darkSurface,
+        title: const Text("Supprimer la mesure ?", style: TextStyle(color: Colors.white)),
+        content: const Text(
+          "Cette action est irréversible. Les données de cette pesée seront supprimées.",
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Annuler", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await provider.deleteBodyMeasurement(id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Mesure corporelle supprimée")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("Supprimer", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOrEditMeasurementModal(BuildContext context, {BodyMeasurement? measurement}) {
+    final isEditing = measurement != null;
+    final provider = context.read<WorkoutProvider>();
+
+    // Pre-fill height from latest measurement if available and creating new
+    final latestHeight = measurement?.height ?? provider.latestBodyMeasurement?.height;
+
+    DateTime selectedDate = measurement?.date ?? DateTime.now();
+    final weightController = TextEditingController(text: measurement?.weight?.toString() ?? '');
+    final heightController = TextEditingController(text: latestHeight?.toString() ?? '');
+    final fatController = TextEditingController(text: measurement?.bodyFatPercentage?.toString() ?? '');
+    final muscleController = TextEditingController(text: measurement?.musclePercentage?.toString() ?? '');
+    final waterController = TextEditingController(text: measurement?.waterPercentage?.toString() ?? '');
+    final boneController = TextEditingController(text: measurement?.boneMass?.toString() ?? '');
+    final noteController = TextEditingController(text: measurement?.note ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.darkBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalContext, setModalState) {
+          // Dynamic IMC preview
+          final double? curWeight = double.tryParse(weightController.text.replaceAll(',', '.'));
+          final double? curHeight = double.tryParse(heightController.text.replaceAll(',', '.'));
+          double? calculatedBmi;
+          String? bmiCategory;
+          if (curWeight != null && curHeight != null && curHeight > 0) {
+            final hM = curHeight / 100.0;
+            calculatedBmi = curWeight / (hM * hM);
+            if (calculatedBmi < 18.5) {
+              bmiCategory = 'Insuffisance pondérale';
+            } else if (calculatedBmi < 25.0) {
+              bmiCategory = 'Corpulence normale';
+            } else if (calculatedBmi < 30.0) {
+              bmiCategory = 'Surpoids';
+            } else {
+              bmiCategory = 'Obésité';
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isEditing ? "Modifier la pesée" : "Nouvelle mesure corporelle",
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        onPressed: () => Navigator.pop(modalContext),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Date picker selector
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: modalContext,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                        builder: (c, child) => Theme(
+                          data: Theme.of(c).copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppTheme.athleticBlue,
+                              surface: AppTheme.darkSurface,
+                            ),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) {
+                        setModalState(() => selectedDate = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.darkSurface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.darkBorder),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_month, color: AppTheme.athleticBlue, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(selectedDate),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Row: Poids & Taille
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInputField(
+                          controller: weightController,
+                          label: "Poids (kg) *",
+                          hint: "ex: 75.5",
+                          icon: Icons.monitor_weight_outlined,
+                          onChanged: (_) => setModalState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildInputField(
+                          controller: heightController,
+                          label: "Taille (cm)",
+                          hint: "ex: 180",
+                          icon: Icons.height_rounded,
+                          onChanged: (_) => setModalState(() {}),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // IMC Preview banner if available
+                  if (calculatedBmi != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _getBmiColor(calculatedBmi).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _getBmiColor(calculatedBmi).withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: _getBmiColor(calculatedBmi)),
+                          const SizedBox(width: 8),
+                          Text(
+                            "IMC estimé : ${calculatedBmi.toStringAsFixed(1)} ($bmiCategory)",
+                            style: TextStyle(
+                              color: _getBmiColor(calculatedBmi),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // Row: % Graisse & % Muscle
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInputField(
+                          controller: fatController,
+                          label: "Masse grasse (%)",
+                          hint: "ex: 15.0",
+                          icon: Icons.pie_chart_outline,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildInputField(
+                          controller: muscleController,
+                          label: "Masse musculaire (%)",
+                          hint: "ex: 42.5",
+                          icon: Icons.fitness_center_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Row: % Eau & Masse osseuse
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInputField(
+                          controller: waterController,
+                          label: "Masse hydrique / Eau (%)",
+                          hint: "ex: 58.0",
+                          icon: Icons.water_drop_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildInputField(
+                          controller: boneController,
+                          label: "Masse osseuse (kg)",
+                          hint: "ex: 3.2",
+                          icon: Icons.accessibility_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Notes
+                  _buildInputField(
+                    controller: noteController,
+                    label: "Notes / Contexte",
+                    hint: "ex: Pesée à jeun au réveil",
+                    icon: Icons.edit_note,
+                    isText: true,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final weight = double.tryParse(weightController.text.trim().replaceAll(',', '.'));
+                        final height = double.tryParse(heightController.text.trim().replaceAll(',', '.'));
+                        final fat = double.tryParse(fatController.text.trim().replaceAll(',', '.'));
+                        final muscle = double.tryParse(muscleController.text.trim().replaceAll(',', '.'));
+                        final water = double.tryParse(waterController.text.trim().replaceAll(',', '.'));
+                        final bone = double.tryParse(boneController.text.trim().replaceAll(',', '.'));
+                        final note = noteController.text.trim().isEmpty ? null : noteController.text.trim();
+
+                        if (weight == null && fat == null && muscle == null && water == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Veuillez renseigner au moins une valeur (poids, %, etc.).")),
+                          );
+                          return;
+                        }
+
+                        final newMeasurement = BodyMeasurement(
+                          id: measurement?.id ?? _uuid.v4(),
+                          date: selectedDate,
+                          weight: weight,
+                          height: height,
+                          bodyFatPercentage: fat,
+                          musclePercentage: muscle,
+                          waterPercentage: water,
+                          boneMass: bone,
+                          note: note,
+                        );
+
+                        await provider.saveBodyMeasurement(newMeasurement);
+
+                        if (modalContext.mounted) {
+                          Navigator.pop(modalContext);
+                        }
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(isEditing ? "Pesée mise à jour !" : "Nouvelle pesée enregistrée !")),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.athleticBlue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        isEditing ? "Enregistrer les modifications" : "Ajouter la pesée",
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool isText = false,
+    ValueChanged<String>? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: isText ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
+          onChanged: onChanged,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+            prefixIcon: Icon(icon, color: Colors.grey[500], size: 18),
+            filled: true,
+            fillColor: AppTheme.darkSurface,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.athleticBlue, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Pectoraux':
@@ -642,12 +1649,14 @@ class CustomLineChart extends StatelessWidget {
   final List<double> values;
   final List<DateTime> dates;
   final String unit;
+  final Color color;
 
   const CustomLineChart({
     super.key,
     required this.values,
     required this.dates,
     required this.unit,
+    this.color = const Color(0xff2563eb),
   });
 
   @override
@@ -673,6 +1682,7 @@ class CustomLineChart extends StatelessWidget {
           values: values,
           dates: dates,
           unit: unit,
+          color: color,
         ),
       ),
     );
@@ -683,11 +1693,13 @@ class LineChartPainter extends CustomPainter {
   final List<double> values;
   final List<DateTime> dates;
   final String unit;
+  final Color color;
 
   LineChartPainter({
     required this.values,
     required this.dates,
     required this.unit,
+    this.color = const Color(0xff2563eb),
   });
 
   @override
@@ -765,10 +1777,10 @@ class LineChartPainter extends CustomPainter {
       fillPath.close();
 
       final fillPaint = Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           colors: [
-            Color(0x222563eb), // Transparent primary blue
-            Color(0x002563eb),
+            color.withOpacity(0.25),
+            color.withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -780,7 +1792,7 @@ class LineChartPainter extends CustomPainter {
 
     // Draw connection line
     final linePaint = Paint()
-      ..color = const Color(0xff2563eb)
+      ..color = color
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -800,18 +1812,17 @@ class LineChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final ringPaint = Paint()
-      ..color = const Color(0xff2563eb)
+      ..color = color
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < count; i++) {
       final pt = points[i];
 
-      // Draw blue ring & white center dot
+      // Draw ring & white center dot
       canvas.drawCircle(pt, 5.5, ringPaint);
       canvas.drawCircle(pt, 2.5, centerDotPaint);
 
       // Label showing date (horizontal axis)
-      // Only display labels strategically if there are many points to avoid overlaps
       if (count <= 7 || i == 0 || i == count - 1 || i == count ~/ 2) {
         final dateStr = DateFormat('dd MMM', 'fr_FR').format(dates[i]);
         textPainter.text = TextSpan(
@@ -825,7 +1836,7 @@ class LineChartPainter extends CustomPainter {
         );
       }
 
-      // Draw weight tag above point
+      // Draw value tag above point
       if (count <= 8 || i == 0 || i == count - 1 || values[i] == maxVal) {
         final valText = values[i].toStringAsFixed(1).replaceAll('.0', '');
         textPainter.text = TextSpan(
@@ -843,7 +1854,7 @@ class LineChartPainter extends CustomPainter {
         );
         canvas.drawRRect(
           RRect.fromRectAndRadius(bubbleRect, const Radius.circular(4)),
-          Paint()..color = const Color(0xff2563eb)..style = PaintingStyle.fill,
+          Paint()..color = color..style = PaintingStyle.fill,
         );
 
         textPainter.paint(
@@ -856,9 +1867,10 @@ class LineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant LineChartPainter oldDelegate) {
-    return oldDelegate.values != values || oldDelegate.dates != dates || oldDelegate.unit != unit;
+    return oldDelegate.values != values || oldDelegate.dates != dates || oldDelegate.unit != unit || oldDelegate.color != color;
   }
 }
+
 
 // ==================== CUSTOM BAR CHART FOR VOLUME ====================
 
