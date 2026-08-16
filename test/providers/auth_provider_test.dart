@@ -104,5 +104,62 @@ void main() {
       expect(deleteResult, isTrue);
       expect((await authProvider.getAllUsers()), isEmpty);
     });
+
+    test('sendPasswordResetEmail() success and failure', () async {
+      final success = await authProvider.sendPasswordResetEmail('user@test.com');
+      expect(success, isTrue);
+      expect(mockRepo.sentResetEmails, contains('user@test.com'));
+
+      mockRepo.shouldFail = true;
+      mockRepo.errorMessage = 'Erreur reset';
+      final fail = await authProvider.sendPasswordResetEmail('invalid');
+      expect(fail, isFalse);
+      expect(authProvider.errorMessage, equals('Erreur reset'));
+    });
+
+    test('changePassword() and updateEmail() management', () async {
+      await authProvider.signUp('user@test.com', 'OldPass123!', 'User');
+
+      final changeSuccess = await authProvider.changePassword('OldPass123!', 'NewStrongPass123!');
+      expect(changeSuccess, isTrue);
+
+      final updateEmailSuccess = await authProvider.updateEmail('NewStrongPass123!', 'newemail@test.com');
+      expect(updateEmailSuccess, isTrue);
+      expect(authProvider.currentUser?.email, equals('newemail@test.com'));
+    });
+
+    test('Email verification handling', () async {
+      await authProvider.signUp('user@test.com', 'Pass12345!', 'User');
+      expect(authProvider.isEmailVerifiedState, isFalse);
+
+      mockRepo.emailVerified = true;
+      final verified = await authProvider.checkEmailVerified();
+      expect(verified, isTrue);
+      expect(authProvider.isEmailVerifiedState, isTrue);
+    });
+
+    test('Rate limiting lockout after 5 consecutive failures', () async {
+      mockRepo.shouldFail = true;
+      mockRepo.errorMessage = 'Identifiants invalides';
+
+      for (int i = 0; i < 4; i++) {
+        final res = await authProvider.signIn('user@test.com', 'wrong');
+        expect(res, isFalse);
+        expect(authProvider.isLockedOut, isFalse);
+      }
+
+      // 5ème échec -> déclenche le lockout
+      final res5 = await authProvider.signIn('user@test.com', 'wrong');
+      expect(res5, isFalse);
+      expect(authProvider.isLockedOut, isTrue);
+      expect(authProvider.remainingLockoutSeconds, greaterThan(0));
+
+      // Tentative pendant le lockout -> bloqué immédiatement
+      mockRepo.shouldFail = false;
+      final blocked = await authProvider.signIn('user@test.com', 'good');
+      expect(blocked, isFalse);
+      expect(authProvider.errorMessage, contains('Trop de tentatives'));
+    });
   });
 }
+

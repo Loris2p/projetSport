@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
-import 'admin_screen.dart';
+import '../utils/security_utils.dart';
+import '../widgets/password_strength_indicator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +29,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _birthDateController = TextEditingController(
       text: _selectedBirthDate != null ? DateFormat('dd/MM/yyyy').format(_selectedBirthDate!) : '',
     );
+    // Vérifier l'état de l'email au chargement
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().checkEmailVerified();
+    });
   }
 
   @override
@@ -112,6 +117,303 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _showChangePasswordDialog() async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final dialogKey = GlobalKey<FormState>();
+
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final auth = Provider.of<AuthProvider>(context);
+            return AlertDialog(
+              backgroundColor: const Color(0xff0f172a),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: Color(0xff3b82f6), size: 24),
+                  SizedBox(width: 10),
+                  Text(
+                    "Changer le mot de passe",
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: dialogKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: currentPasswordController,
+                        obscureText: obscureCurrent,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration(
+                          labelText: "Mot de passe actuel",
+                          prefixIcon: Icons.lock_outline,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureCurrent ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: Colors.white60,
+                            ),
+                            onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                          ),
+                        ),
+                        validator: (v) => (v == null || v.isEmpty) ? "Veuillez entrer votre mot de passe actuel." : null,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: newPasswordController,
+                        obscureText: obscureNew,
+                        style: const TextStyle(color: Colors.white),
+                        onChanged: (_) => setDialogState(() {}),
+                        decoration: _inputDecoration(
+                          labelText: "Nouveau mot de passe",
+                          prefixIcon: Icons.lock_reset,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: Colors.white60,
+                            ),
+                            onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                          ),
+                        ),
+                        validator: (v) => SecurityUtils.validatePassword(v),
+                      ),
+                      PasswordStrengthIndicator(password: newPasswordController.text),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: obscureConfirm,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration(
+                          labelText: "Confirmer le nouveau mot de passe",
+                          prefixIcon: Icons.check_circle_outline,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: Colors.white60,
+                            ),
+                            onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return "Veuillez confirmer le mot de passe.";
+                          if (v != newPasswordController.text) return "Les mots de passe ne correspondent pas.";
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text("Annuler", style: TextStyle(color: Colors.white60)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff2563eb),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: auth.isLoading
+                      ? null
+                      : () async {
+                          if (!dialogKey.currentState!.validate()) return;
+                          final nav = Navigator.of(ctx);
+                          final messenger = ScaffoldMessenger.of(context);
+
+                          final ok = await auth.changePassword(
+                            currentPasswordController.text,
+                            newPasswordController.text,
+                          );
+
+                          if (mounted) {
+                            if (ok) {
+                              nav.pop();
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text("Mot de passe modifié avec succès !"),
+                                  backgroundColor: Color(0xff10b981),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(auth.errorMessage ?? "Erreur lors de la modification."),
+                                  backgroundColor: const Color(0xffef4444),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: auth.isLoading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text("Mettre à jour", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showUpdateEmailDialog() async {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final dialogKey = GlobalKey<FormState>();
+    bool obscurePassword = true;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final auth = Provider.of<AuthProvider>(context);
+            return AlertDialog(
+              backgroundColor: const Color(0xff0f172a),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.mark_email_read_outlined, color: Color(0xff3b82f6), size: 24),
+                  SizedBox(width: 10),
+                  Text(
+                    "Modifier l'adresse email",
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: dialogKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Pour votre sécurité, saisissez votre nouvelle adresse email ainsi que votre mot de passe actuel :",
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration(
+                          labelText: "Nouvelle adresse email",
+                          prefixIcon: Icons.email_outlined,
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return "Veuillez entrer une adresse email.";
+                          if (!SecurityUtils.isValidEmail(v.trim())) return "Adresse email invalide.";
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: obscurePassword,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration(
+                          labelText: "Mot de passe actuel",
+                          prefixIcon: Icons.lock_outline,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: Colors.white60,
+                            ),
+                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                          ),
+                        ),
+                        validator: (v) => (v == null || v.isEmpty) ? "Veuillez entrer votre mot de passe." : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text("Annuler", style: TextStyle(color: Colors.white60)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff2563eb),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: auth.isLoading
+                      ? null
+                      : () async {
+                          if (!dialogKey.currentState!.validate()) return;
+                          final nav = Navigator.of(ctx);
+                          final messenger = ScaffoldMessenger.of(context);
+
+                          final ok = await auth.updateEmail(
+                            passwordController.text,
+                            emailController.text.trim(),
+                          );
+
+                          if (mounted) {
+                            if (ok) {
+                              nav.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Un e-mail de confirmation a été envoyé à ${emailController.text.trim()}. Veuillez valider le lien pour finaliser la mise à jour.",
+                                  ),
+                                  backgroundColor: const Color(0xff10b981),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(auth.errorMessage ?? "Erreur lors du changement d'email."),
+                                  backgroundColor: const Color(0xffef4444),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: auth.isLoading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text("Enregistrer", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -127,6 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final age = _calculateAge(_selectedBirthDate);
     final totalWorkouts = workoutProvider.history.length;
+    final isEmailVerified = authProvider.isEmailVerifiedState;
 
     return Scaffold(
       backgroundColor: const Color(0xff090d16),
@@ -209,32 +512,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.white60,
                         ),
                       ),
-                      if (user.isAdmin) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xff7c3aed).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xffa78bfa)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.admin_panel_settings, color: Color(0xffa78bfa), size: 14),
-                              SizedBox(width: 4),
-                              Text(
-                                "Administrateur",
-                                style: TextStyle(
-                                  color: Color(0xffa78bfa),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                      const SizedBox(height: 8),
+
+                      // Email verification badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (isEmailVerified ? const Color(0xff10b981) : const Color(0xfff59e0b)).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isEmailVerified ? const Color(0xff10b981) : const Color(0xfff59e0b),
                           ),
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isEmailVerified ? Icons.verified_user : Icons.warning_amber_rounded,
+                              size: 13,
+                              color: isEmailVerified ? const Color(0xff10b981) : const Color(0xfff59e0b),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              isEmailVerified ? "Email vérifié" : "Email non vérifié",
+                              style: TextStyle(
+                                color: isEmailVerified ? const Color(0xff10b981) : const Color(0xfff59e0b),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -320,13 +629,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Email field (Always read-only)
+                      // Email field
                       TextFormField(
                         initialValue: user.email,
                         enabled: false,
                         style: const TextStyle(color: Colors.white70),
                         decoration: _inputDecoration(
-                          labelText: "Adresse email (Non modifiable)",
+                          labelText: "Adresse email actuelle",
                           prefixIcon: Icons.email_outlined,
                         ),
                       ),
@@ -335,7 +644,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Save button if editing
+                // Save button if editing profile
                 if (_isEditing) ...[
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -361,33 +670,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                 ],
 
-                // Administration shortcut button if Admin
-                if (user.isAdmin) ...[
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Color(0xff7c3aed)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.admin_panel_settings, color: Color(0xffa78bfa)),
-                    label: const Text(
-                      "Panneau d'administration",
-                      style: TextStyle(color: Color(0xffa78bfa), fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AdminScreen()),
-                      );
-                    },
+                // Sécurité & Compte Section
+                const Text(
+                  "Sécurité & Compte",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
+                const SizedBox(height: 14),
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Column(
+                      children: [
+                        // Email verification actions if not verified
+                        if (!isEmailVerified) ...[
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.mark_email_unread_outlined, color: Color(0xfff59e0b)),
+                            title: const Text("Email non vérifié", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                            subtitle: const Text("Validez votre compte pour sécuriser vos données.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            trailing: TextButton(
+                              onPressed: authProvider.isLoading
+                                  ? null
+                                  : () async {
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      final ok = await authProvider.sendEmailVerification();
+                                      if (mounted) {
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              ok
+                                                  ? "E-mail de confirmation envoyé à ${user.email} !"
+                                                  : (authProvider.errorMessage ?? "Erreur d'envoi."),
+                                            ),
+                                            backgroundColor: ok ? const Color(0xff10b981) : const Color(0xffef4444),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              child: const Text("Renvoyer", style: TextStyle(color: Color(0xff3b82f6), fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const Divider(color: Colors.white12),
+                        ],
+
+                        // Modifier l'adresse email
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.alternate_email, color: Color(0xff93c5fd)),
+                          title: const Text("Modifier l'adresse email", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                          subtitle: const Text("Changer l'e-mail associé à votre compte", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                          onTap: _showUpdateEmailDialog,
+                        ),
+                        const Divider(color: Colors.white12),
+
+                        // Modifier le mot de passe
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.lock_reset_rounded, color: Color(0xffa78bfa)),
+                          title: const Text("Modifier le mot de passe", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                          subtitle: const Text("Mettre à jour vos identifiants de connexion", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                          onTap: _showChangePasswordDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Sign out button
                 OutlinedButton.icon(
@@ -505,3 +869,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+

@@ -24,12 +24,31 @@ void main() {
       expect(currentUser?.email, equals('user@example.com'));
     });
 
-    test('Should throw exception when signing up with weak password (< 6 chars)', () async {
+    test('Should throw exception when signing up with weak password (< 8 chars)', () async {
       expect(
         () => authRepo.signUp('new@example.com', '123', 'New User'),
-        throwsA(predicate((e) => e.toString().contains('trop faible'))),
+        throwsA(predicate((e) => e.toString().contains('8 caractères') || e.toString().contains('trop faible'))),
       );
     });
+
+    test('Should handle sendPasswordResetEmail', () async {
+      await authRepo.sendPasswordResetEmail('reset@example.com');
+      expect(authRepo.sentResetEmails, contains('reset@example.com'));
+    });
+
+    test('Should handle email verification status and sending', () async {
+      expect(await authRepo.isEmailVerified(), isFalse);
+      authRepo.emailVerified = true;
+      expect(await authRepo.isEmailVerified(), isTrue);
+    });
+
+    test('Should handle changePassword and updateEmail', () async {
+      await authRepo.signUp('change@example.com', 'password123', 'User');
+      await authRepo.changePassword(currentPassword: 'password123', newPassword: 'newpassword123');
+      await authRepo.updateEmail(currentPassword: 'newpassword123', newEmail: 'updated@example.com');
+      expect(authRepo.currentUser?.email, equals('updated@example.com'));
+    });
+
 
     test('Should throw exception when signing up with already registered email', () async {
       await authRepo.signUp('unique@example.com', 'password123', 'User 1');

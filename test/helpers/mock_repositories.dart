@@ -12,6 +12,8 @@ class MockAuthRepository implements AuthRepository {
   UserProfile? currentUser;
   bool shouldFail = false;
   String errorMessage = 'Auth error';
+  bool emailVerified = false;
+  final List<String> sentResetEmails = [];
 
   @override
   Future<void> init() async {}
@@ -53,8 +55,8 @@ class MockAuthRepository implements AuthRepository {
     if (users.any((u) => u.email == email.trim().toLowerCase())) {
       throw Exception("Cet email est déjà utilisé par un autre compte.");
     }
-    if (password.length < 6) {
-      throw Exception("Le mot de passe est trop faible. Il doit contenir au moins 6 caractères.");
+    if (password.length < 8) {
+      throw Exception("Le mot de passe doit contenir au moins 8 caractères.");
     }
     final newUser = UserProfile(
       uid: 'user_${DateTime.now().millisecondsSinceEpoch}',
@@ -69,9 +71,52 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (shouldFail) throw Exception(errorMessage);
+    if (email.trim().isEmpty) {
+      throw Exception("Veuillez saisir votre adresse email.");
+    }
+    sentResetEmails.add(email.trim().toLowerCase());
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    if (shouldFail) throw Exception(errorMessage);
+    if (currentUser == null) throw Exception("Aucun utilisateur connecté.");
+  }
+
+  @override
+  Future<bool> isEmailVerified() async {
+    if (shouldFail) throw Exception(errorMessage);
+    return emailVerified;
+  }
+
+  @override
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    if (shouldFail) throw Exception(errorMessage);
+    if (currentUser == null) throw Exception("Aucun utilisateur connecté.");
+    if (currentPassword == 'wrong_pass') throw Exception("Le mot de passe actuel est incorrect.");
+    if (newPassword.length < 8) throw Exception("Le nouveau mot de passe est trop faible.");
+  }
+
+  @override
+  Future<void> updateEmail({required String currentPassword, required String newEmail}) async {
+    if (shouldFail) throw Exception(errorMessage);
+    if (currentUser == null) throw Exception("Aucun utilisateur connecté.");
+    if (currentPassword == 'wrong_pass') throw Exception("Le mot de passe actuel est incorrect.");
+    currentUser = currentUser!.copyWith(email: newEmail.trim().toLowerCase());
+  }
+
+  @override
+  Future<void> reloadUser() async {
+    if (shouldFail) throw Exception(errorMessage);
+  }
+
+  @override
   Future<void> signOut() async {
     if (shouldFail) throw Exception(errorMessage);
     currentUser = null;
+    emailVerified = false;
   }
 
   @override
@@ -103,6 +148,7 @@ class MockAuthRepository implements AuthRepository {
     }
   }
 }
+
 
 class MockWorkoutRepository implements WorkoutRepository {
   String? currentUserId;

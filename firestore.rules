@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fonction helper pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction helper pour vérifier si l'utilisateur accède à ses propres données
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Fonction helper pour vérifier si l'utilisateur est administrateur
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
+    }
+
+    // Collection des profils utilisateurs
+    match /users/{userId} {
+      // Lecture : autorisé par le propriétaire ou un administrateur
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Création : autorisé à l'inscription si le compte correspond et n'est pas auto-déclaré admin
+      allow create: if isOwner(userId) && 
+        (!request.resource.data.keys().hasAny(['isAdmin']) || request.resource.data.isAdmin == false);
+      
+      // Mise à jour : le propriétaire peut modifier son profil mais ne peut pas s'auto-promouvoir admin
+      allow update: if (isOwner(userId) && 
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']) || 
+           request.resource.data.isAdmin == resource.data.isAdmin)) 
+        || isAdmin();
+      
+      // Suppression : propriétaire ou administrateur
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Collections de données d'entraînement (Workout, Exercices, Programmes, Mesures)
+    match /workouts/{workoutId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId);
+    }
+
+    match /programs/{programId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId);
+    }
+
+    match /exercises/{exerciseId} {
+      // Les exercices prédéfinis (userId == null) sont lisibles par tous les utilisateurs connectés
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId || isAdmin());
+    }
+
+    match /body_measurements/{measurementId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId);
+    }
+
+    match /personal_records/{recordId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId);
+    }
+  }
+}
