@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/workout_provider.dart';
-import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'programs_screen.dart';
 import 'history_screen.dart';

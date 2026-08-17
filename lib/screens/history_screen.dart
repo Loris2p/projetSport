@@ -433,7 +433,10 @@ class SessionDetailScreen extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  Expanded(
+                                    child: Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  ),
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(color: const Color(0xff2d2d34), borderRadius: BorderRadius.circular(4)),

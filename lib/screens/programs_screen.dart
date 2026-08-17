@@ -398,15 +398,19 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Exercices du programme (${_selectedExercises.length})",
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          "Exercices du programme (${_selectedExercises.length})",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                       ),
-                      if (_selectedExercises.isNotEmpty)
+                      if (_selectedExercises.isNotEmpty) ...[
+                        const SizedBox(width: 8),
                         Text(
                           "Maintenez ☰ pour réordonner",
                           style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                         ),
+                      ],
                     ],
                   ),
 
@@ -984,10 +988,13 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "Type d'application sur le terrain :",
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                          const Expanded(
+                            child: Text(
+                              "Type d'application :",
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             selectedType.label,
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xff2563eb)),
@@ -1266,12 +1273,15 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Paliers & Étapes Cardio :",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                Expanded(
+                  child: Text(
+                    "Paliers & Étapes Cardio :",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
                 ),
+                SizedBox(width: 8),
                 Text(
-                  "Durée, vitesse (km/h) & pente (%)",
+                  "Durée, km/h & pente (%)",
                   style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
@@ -1396,10 +1406,13 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Tours & Paliers Fractionné / HIIT :",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                Expanded(
+                  child: Text(
+                    "Tours & Paliers Fractionné / HIIT :",
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
                 ),
+                SizedBox(width: 8),
                 Text(
                   "Effort, repos, km/h & pente",
                   style: TextStyle(fontSize: 11, color: Colors.grey),
@@ -1722,18 +1735,22 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Sélectionner des exercices",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-                              ),
-                              Text(
-                                "${_selectedExercises.length} sélectionné(s)",
-                                style: const TextStyle(fontSize: 12, color: Color(0xff2563eb), fontWeight: FontWeight.w600),
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Sélectionner des exercices",
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  "${_selectedExercises.length} sélectionné(s)",
+                                  style: const TextStyle(fontSize: 12, color: Color(0xff2563eb), fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                           ),
                           Row(
                             children: [

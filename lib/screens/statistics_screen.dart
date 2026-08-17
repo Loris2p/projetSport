@@ -254,13 +254,22 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _showEstimated1RM ? "Progression du 1RM" : "Evolution de charge max",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white70),
+                    Expanded(
+                      child: Text(
+                        _showEstimated1RM ? "Progression du 1RM" : "Evolution de charge max",
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white70),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Text(
-                      selectedExercise.name,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        selectedExercise.name,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

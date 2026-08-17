@@ -35,6 +35,11 @@ service cloud.firestore {
       
       // Suppression : propriétaire ou administrateur
       allow delete: if isOwner(userId) || isAdmin();
+
+      // Sous-collections de l'utilisateur (programs, sessions, records, body_measurements)
+      match /{document=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
     }
 
     // Collections de données d'entraînement (Workout, Exercices, Programmes, Mesures)
@@ -47,9 +52,22 @@ service cloud.firestore {
     }
 
     match /exercises/{exerciseId} {
-      // Les exercices prédéfinis (userId == null) sont lisibles par tous les utilisateurs connectés
+      // Les exercices prédéfinis sont lisibles par tous les utilisateurs connectés
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == request.resource.data.userId || isAdmin());
+      
+      // Création d'un exercice personnalisé
+      allow create: if isAuthenticated() && (
+        request.resource.data.ownerId == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Modification / Suppression d'un exercice personnalisé
+      allow update, delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
     }
 
     match /body_measurements/{measurementId} {

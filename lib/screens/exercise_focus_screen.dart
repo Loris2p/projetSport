@@ -8,6 +8,7 @@ import '../widgets/category_badge.dart';
 import '../widgets/rest_timer_overlay.dart';
 import '../widgets/set_numeric_input.dart';
 import '../widgets/youtube_player_dialog.dart';
+import '../services/ad_service.dart';
 import 'workout_summary_screen.dart';
 
 class ExerciseFocusScreen extends StatefulWidget {
@@ -1179,14 +1180,19 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
     Navigator.pop(context); // pop loader
 
     if (completedSession != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => WorkoutSummaryScreen(
-            session: completedSession,
-            isNewCompletion: true,
-          ),
-        ),
+      AdService.showInterstitialAd(
+        onComplete: () {
+          if (!context.mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WorkoutSummaryScreen(
+                session: completedSession,
+                isNewCompletion: true,
+              ),
+            ),
+          );
+        },
       );
     } else {
       Navigator.pop(context);

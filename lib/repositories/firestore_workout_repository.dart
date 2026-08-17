@@ -173,6 +173,7 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
 
     final data = exercise.toJson();
     data['ownerId'] = _userId;
+    data['userId'] = _userId;
 
     await _firestore
         .collection('exercises')
