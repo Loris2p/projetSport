@@ -182,11 +182,12 @@ class WorkoutProvider with ChangeNotifier, WidgetsBindingObserver {
   }
 
   // --- Exercises ---
-  Future<void> createCustomExercise(String name, {List<String>? categories, String? category, String? notes, String? videoUrl}) async {
+  Future<void> createCustomExercise(String name, {List<String>? categories, String? category, String? equipment, String? notes, String? videoUrl}) async {
     final newExercise = Exercise(
       id: 'custom_${_uuid.v4()}',
       name: name,
       categories: categories ?? (category != null && category.isNotEmpty ? [category] : ['Pectoraux']),
+      equipment: equipment,
       notes: notes,
       videoUrl: videoUrl,
       isCustom: true,

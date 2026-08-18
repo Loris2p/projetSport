@@ -377,7 +377,34 @@ class _ExerciseFocusScreenState extends State<ExerciseFocusScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      MultiCategoryBadges(categories: exercise.categories),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          MultiCategoryBadges(categories: exercise.categories),
+                          if (exercise.equipment != null && exercise.equipment!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.white12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fitness_center_outlined, size: 12, color: Colors.white70),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    exercise.equipment!,
+                                    style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

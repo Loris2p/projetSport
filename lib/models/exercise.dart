@@ -4,6 +4,7 @@ class Exercise {
   final String id;
   final String name;
   final List<String> categories;
+  final String? equipment;
   final String? notes;
   final String? videoUrl;
   final bool isCustom;
@@ -13,6 +14,7 @@ class Exercise {
     required this.name,
     List<String>? categories,
     String? category,
+    this.equipment,
     this.notes,
     this.videoUrl,
     this.isCustom = false,
@@ -20,9 +22,28 @@ class Exercise {
             ? categories
             : (category != null && category.isNotEmpty ? [category] : const ['Autre']);
 
-
   /// Getter de compatibilité renvoyant la catégorie principale
   String get category => categories.isNotEmpty ? categories.first : 'Autre';
+
+  Exercise copyWith({
+    String? id,
+    String? name,
+    List<String>? categories,
+    String? equipment,
+    String? notes,
+    String? videoUrl,
+    bool? isCustom,
+  }) {
+    return Exercise(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      categories: categories ?? this.categories,
+      equipment: equipment ?? this.equipment,
+      notes: notes ?? this.notes,
+      videoUrl: videoUrl ?? this.videoUrl,
+      isCustom: isCustom ?? this.isCustom,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -30,6 +51,7 @@ class Exercise {
       'name': name,
       'categories': categories,
       'category': category,
+      'equipment': equipment,
       'notes': notes,
       'videoUrl': videoUrl,
       'isCustom': isCustom,
@@ -52,6 +74,7 @@ class Exercise {
       id: json['id'] as String,
       name: json['name'] as String,
       categories: parsedCategories,
+      equipment: json['equipment'] as String? ?? json['machine'] as String? ?? json['materiel'] as String?,
       notes: json['notes'] as String?,
       videoUrl: json['videoUrl'] as String?,
       isCustom: json['isCustom'] as bool? ?? false,

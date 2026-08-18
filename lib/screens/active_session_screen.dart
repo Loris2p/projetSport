@@ -263,7 +263,34 @@ class ActiveSessionScreen extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                               const SizedBox(height: 4),
-                              MultiCategoryBadges(categories: exercise.categories, compact: true),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  MultiCategoryBadges(categories: exercise.categories, compact: true),
+                                  if (exercise.equipment != null && exercise.equipment!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.white12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.fitness_center_outlined, size: 10, color: Colors.white70),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            exercise.equipment!,
+                                            style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -893,8 +920,10 @@ class ActiveSessionScreen extends StatelessWidget {
         bool isGridView = false;
         return StatefulBuilder(
           builder: (context, setStateSheet) {
+            final query = searchQuery.toLowerCase();
             final filtered = provider.exercises.where((e) {
-              return e.name.toLowerCase().contains(searchQuery.toLowerCase());
+              return e.name.toLowerCase().contains(query) ||
+                  (e.equipment != null && e.equipment!.toLowerCase().contains(query));
             }).toList();
 
             return DraggableScrollableSheet(
@@ -929,7 +958,7 @@ class ActiveSessionScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
                         decoration: const InputDecoration(
-                          hintText: "Rechercher...",
+                          hintText: "Rechercher un exercice, une machine...",
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
                         ),
@@ -1025,7 +1054,11 @@ class ActiveSessionScreen extends StatelessWidget {
 
                                 return ListTile(
                                   title: Text(ex.name),
-                                  subtitle: Text(ex.category),
+                                  subtitle: Text(
+                                    ex.equipment != null && ex.equipment!.isNotEmpty
+                                        ? "${ex.category} • ${ex.equipment}"
+                                        : ex.category,
+                                  ),
                                   trailing: isAdded
                                       ? const Icon(Icons.check_circle, color: Color(0xff2563eb))
                                       : const Icon(Icons.add_circle_outline),

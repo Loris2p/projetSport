@@ -1703,7 +1703,9 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             final filtered = allExercises.where((ex) {
-              final matchesSearch = ex.name.toLowerCase().contains(_modalSearchQuery.toLowerCase());
+              final query = _modalSearchQuery.toLowerCase();
+              final matchesSearch = ex.name.toLowerCase().contains(query) ||
+                  (ex.equipment != null && ex.equipment!.toLowerCase().contains(query));
               final matchesCategory = _modalSelectedCategory == 'Tous' ||
                   ex.categories.contains(_modalSelectedCategory) ||
                   ex.category == _modalSelectedCategory;
@@ -1975,7 +1977,34 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                                           ),
                                           subtitle: Padding(
                                             padding: const EdgeInsets.only(top: 4.0),
-                                            child: MultiCategoryBadges(categories: ex.categories, compact: true),
+                                            child: Wrap(
+                                              crossAxisAlignment: WrapCrossAlignment.center,
+                                              spacing: 6,
+                                              runSpacing: 4,
+                                              children: [
+                                                MultiCategoryBadges(categories: ex.categories, compact: true),
+                                                if (ex.equipment != null && ex.equipment!.isNotEmpty)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white.withValues(alpha: 0.08),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                      border: Border.all(color: Colors.white12),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(Icons.fitness_center_outlined, size: 10, color: Colors.white70),
+                                                        const SizedBox(width: 3),
+                                                        Text(
+                                                          ex.equipment!,
+                                                          style: const TextStyle(fontSize: 9, color: Colors.white70, fontWeight: FontWeight.w500),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
                                           ),
                                           trailing: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -2075,8 +2104,8 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
   void _showCreateExerciseDialog(BuildContext context, WorkoutProvider provider, StateSetter setModalState) {
     final formKey = GlobalKey<FormState>();
     String name = '';
-    List<String> selectedCategories = [];
-
+    List<String> selectedCategories = ['Pectoraux'];
+    String equipment = '';
     String notes = '';
     String videoUrl = '';
 
@@ -2120,6 +2149,17 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: "Machine / Matériel requis (optionnel)",
+                          hintText: "Ex: Barre guidée, Haltères, Poulie...",
+                          prefixIcon: Icon(Icons.fitness_center_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        onSaved: (val) => equipment = val?.trim() ?? '',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                         decoration: const InputDecoration(
                           labelText: "Notes / Description (optionnel)",
                           border: OutlineInputBorder(),
@@ -2151,12 +2191,14 @@ class _ProgramEditorScreenState extends State<ProgramEditorScreen> {
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       formKey.currentState!.save();
+                      final cleanEquipment = equipment.trim().isEmpty ? null : equipment.trim();
                       final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
                       final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
 
                       await provider.createCustomExercise(
                         name,
                         categories: selectedCategories,
+                        equipment: cleanEquipment,
                         notes: cleanNotes,
                         videoUrl: cleanVideoUrl,
                       );

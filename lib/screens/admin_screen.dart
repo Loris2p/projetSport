@@ -359,7 +359,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     final allExercises = workoutProvider.exercises;
 
     final filteredExercises = allExercises.where((ex) {
-      final matchesSearch = ex.name.toLowerCase().contains(_exerciseSearchQuery.toLowerCase());
+      final query = _exerciseSearchQuery.toLowerCase();
+      final matchesSearch = ex.name.toLowerCase().contains(query) ||
+          (ex.equipment != null && ex.equipment!.toLowerCase().contains(query));
       final matchesCategory = _selectedExerciseCategory == 'Tous' ||
           ex.categories.contains(_selectedExerciseCategory) ||
           ex.category == _selectedExerciseCategory;
@@ -377,7 +379,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
             children: [
               TextField(
                 decoration: const InputDecoration(
-                  hintText: "Rechercher un exercice...",
+                  hintText: "Rechercher un exercice, une machine...",
                   prefixIcon: Icon(Icons.search, size: 20),
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(vertical: 8),
@@ -486,7 +488,34 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 6),
-                            MultiCategoryBadges(categories: ex.categories, compact: true),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                MultiCategoryBadges(categories: ex.categories, compact: true),
+                                if (ex.equipment != null && ex.equipment!.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.white12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.fitness_center_outlined, size: 11, color: Colors.white70),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          ex.equipment!,
+                                          style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                             if (ex.notes != null && ex.notes!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
@@ -550,7 +579,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
     List<String> selectedCategories = ex != null ? List.from(ex.categories) : [];
-
+    String equipment = ex?.equipment ?? '';
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
     bool isCustom = ex?.isCustom ?? false;
@@ -599,6 +628,18 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        initialValue: equipment,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: "Machine / Matériel requis (optionnel)",
+                          hintText: "Ex: Barre guidée, Haltères, Poulie vis-à-vis...",
+                          prefixIcon: Icon(Icons.fitness_center_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        onSaved: (val) => equipment = val?.trim() ?? '',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                         initialValue: notes,
                         decoration: const InputDecoration(
                           labelText: "Notes / Description",
@@ -644,6 +685,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       formKey.currentState!.save();
+                      final cleanEquipment = equipment.trim().isEmpty ? null : equipment.trim();
                       final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
                       final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
                       if (ex == null) {
@@ -651,6 +693,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           id: 'exercise_${DateTime.now().millisecondsSinceEpoch}',
                           name: name,
                           categories: selectedCategories,
+                          equipment: cleanEquipment,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                           isCustom: isCustom,
@@ -661,6 +704,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                           id: ex.id,
                           name: name,
                           categories: selectedCategories,
+                          equipment: cleanEquipment,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                           isCustom: isCustom,

@@ -27,7 +27,9 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
 
     // Filter exercises based on search query and category
     final filteredExercises = allExercises.where((ex) {
-      final matchesSearch = ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final query = _searchQuery.toLowerCase();
+      final matchesSearch = ex.name.toLowerCase().contains(query) ||
+          (ex.equipment != null && ex.equipment!.toLowerCase().contains(query));
       final matchesCategory = _selectedCategory == 'Tous' ||
           ex.categories.contains(_selectedCategory) ||
           ex.category == _selectedCategory;
@@ -68,7 +70,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
             child: TextField(
               decoration: InputDecoration(
-                hintText: "Rechercher un exercice...",
+                hintText: "Rechercher un exercice, une machine...",
                 prefixIcon: const Icon(Icons.search, size: 20),
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -198,6 +200,23 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (ex.equipment != null && ex.equipment!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.fitness_center, size: 9, color: Colors.grey),
+                                        const SizedBox(width: 3),
+                                        Expanded(
+                                          child: Text(
+                                            ex.equipment!,
+                                            style: const TextStyle(fontSize: 9, color: Colors.grey),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -265,7 +284,34 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const SizedBox(height: 6),
-                                  MultiCategoryBadges(categories: ex.categories, compact: true),
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      MultiCategoryBadges(categories: ex.categories, compact: true),
+                                      if (ex.equipment != null && ex.equipment!.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: Colors.white12),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.fitness_center_outlined, size: 11, color: Colors.white70),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                ex.equipment!,
+                                                style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   if (ex.notes != null && ex.notes!.isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Text(
@@ -322,7 +368,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     final formKey = GlobalKey<FormState>();
     String name = ex?.name ?? '';
     List<String> selectedCategories = ex != null ? List.from(ex.categories) : [];
-
+    String equipment = ex?.equipment ?? '';
     String notes = ex?.notes ?? '';
     String videoUrl = ex?.videoUrl ?? '';
 
@@ -374,6 +420,18 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        initialValue: equipment,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: "Machine / Matériel requis (optionnel)",
+                          hintText: "Ex: Barre guidée, Haltères, Poulie vis-à-vis...",
+                          prefixIcon: Icon(Icons.fitness_center_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        onSaved: (val) => equipment = val?.trim() ?? '',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                         initialValue: notes,
                         decoration: const InputDecoration(
                           labelText: "Notes / Description (optionnel)",
@@ -407,12 +465,14 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       formKey.currentState!.save();
+                      final cleanEquipment = equipment.trim().isEmpty ? null : equipment.trim();
                       final cleanNotes = notes.trim().isEmpty ? null : notes.trim();
                       final cleanVideoUrl = videoUrl.trim().isEmpty ? null : videoUrl.trim();
                       if (ex == null) {
                         provider.createCustomExercise(
                           name,
                           categories: selectedCategories,
+                          equipment: cleanEquipment,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                         );
@@ -421,6 +481,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                           id: ex.id,
                           name: name,
                           categories: selectedCategories,
+                          equipment: cleanEquipment,
                           notes: cleanNotes,
                           videoUrl: cleanVideoUrl,
                           isCustom: true,

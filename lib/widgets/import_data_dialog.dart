@@ -80,6 +80,7 @@ class _ImportDataDialogState extends State<ImportDataDialog> with SingleTickerPr
             await provider.createCustomExercise(
               customEx.name,
               categories: customEx.categories,
+              equipment: customEx.equipment,
               notes: customEx.notes,
               videoUrl: customEx.videoUrl,
             );
@@ -118,6 +119,7 @@ class _ImportDataDialogState extends State<ImportDataDialog> with SingleTickerPr
             await provider.createCustomExercise(
               ex.name,
               categories: ex.categories,
+              equipment: ex.equipment,
               notes: ex.notes,
               videoUrl: ex.videoUrl,
             );
@@ -472,7 +474,15 @@ class _ImportDataDialogState extends State<ImportDataDialog> with SingleTickerPr
                       dense: true,
                       leading: CategoryBadge(category: ex.category, compact: true),
                       title: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: ex.notes != null ? Text(ex.notes!, style: const TextStyle(color: Colors.grey, fontSize: 11)) : null,
+                      subtitle: (ex.equipment != null && ex.equipment!.isNotEmpty) || (ex.notes != null && ex.notes!.isNotEmpty)
+                          ? Text(
+                              [
+                                if (ex.equipment != null && ex.equipment!.isNotEmpty) ex.equipment!,
+                                if (ex.notes != null && ex.notes!.isNotEmpty) ex.notes!,
+                              ].join(" • "),
+                              style: const TextStyle(color: Colors.grey, fontSize: 11),
+                            )
+                          : null,
                     ),
                   );
                 },
