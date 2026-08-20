@@ -291,25 +291,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       // Logo Icon with glowing background effect
                       Center(
                         child: Container(
-                          height: 80,
-                          width: 80,
+                          height: 84,
+                          width: 84,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xff3b82f6), Color(0xff8b5cf6)],
-                            ),
+                            borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xff8b5cf6).withValues(alpha: 0.4),
-                                blurRadius: 20,
+                                color: const Color(0xff8b5cf6).withValues(alpha: 0.45),
+                                blurRadius: 24,
                                 spreadRadius: 2,
                               )
                             ],
                           ),
-                          child: const Icon(
-                            Icons.fitness_center_rounded,
-                            size: 40,
-                            color: Colors.white,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Image.asset(
+                              'assets/images/sportilife_logo.png',
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
